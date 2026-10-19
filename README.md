@@ -114,4 +114,4 @@ github-project-review/
 
 ## 许可
 
-内部使用，未公开发布。
+[MIT License](LICENSE) © 2026 hiclaw520 <hiclaw520@yeah.net>

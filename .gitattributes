@@ -1,0 +1,4 @@
+# Windows 批处理必须 CRLF，shell 脚本必须 LF，跨平台克隆/检出/打包才不会出问题
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.sh text eol=lf

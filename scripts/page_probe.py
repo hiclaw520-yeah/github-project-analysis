@@ -20,7 +20,7 @@ import sys
 import urllib.request
 from datetime import datetime, timezone
 
-UA = "Mozilla/5.0 (compatible; github-project-review/2.0)"
+UA = "Mozilla/5.0 (compatible; github-project-review)"
 
 
 def parse_repo(arg):

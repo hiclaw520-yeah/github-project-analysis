@@ -191,7 +191,7 @@ def main():
             "agent_files": [p for p in paths if re.search(r"(^|/)(agents?\.md|claude\.md|\.cursorrules|\.agents/|\.claude/|\.cursor/)", p.lower())][:8],
             "top_level": sorted({p.split("/")[0] for p in paths})[:40],
         }
-        # 命中 TODO 过多等需 clone 后用 code_stats.py
+        # 命中 TODO 过多等需 clone 后用 local_probe.py / arch_probe.py
 
     if as_json:
         print(json.dumps(out, ensure_ascii=False, indent=2))

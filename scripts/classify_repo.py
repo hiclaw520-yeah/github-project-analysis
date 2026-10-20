@@ -40,7 +40,7 @@ SKIP = {".git", "node_modules", "venv", ".venv", "dist", "build", "__pycache__",
 
 def list_files(root):
     try:
-        out = subprocess.run(["git", "ls-files"], cwd=root, capture_output=True, text=True, timeout=60).stdout
+        out = subprocess.run(GIT_SAFE + ["ls-files"], cwd=root, capture_output=True, text=True, timeout=60).stdout
         files = [l for l in out.splitlines() if l.strip()]
         if files:
             return files
@@ -50,14 +50,39 @@ def list_files(root):
     for dp, dns, fns in os.walk(root):
         dns[:] = [d for d in dns if d not in SKIP]
         for f in fns:
-            files.append(os.path.relpath(os.path.join(dp, f), root))
+            files.append(os.path.relpath(os.path.join(dp, f), root).replace(os.sep, "/"))
     return files
+
+
+# 所有 git 调用都走这个包装：命令行 -c 优先级高于仓库自带的 .git/config，
+# 避免被评估仓库通过 core.fsmonitor / core.sshCommand / hooksPath 等配置在本机执行命令。
+GIT_SAFE = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+            "-c", "core.sshCommand=false", "-c", "core.pager=cat", "-c", "credential.helper=",
+            "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]
+
+
+_CFG = {"root_real": None}
+
+
+def inside_repo(p):
+    """仓库是不可信数据：拒绝符号链接，且真实路径必须落在仓库目录内，
+    防止恶意仓库用软链接把沙箱里仓库外的文件（密钥、配置等）读进分析输出。"""
+    try:
+        if os.path.islink(p):
+            return False
+        rr = _CFG["root_real"]
+        if rr is None:
+            return True
+        rp = os.path.realpath(p)
+        return rp == rr or rp.startswith(rr + os.sep)
+    except Exception:
+        return False
 
 
 def read(root, rel, limit=400_000):
     try:
         p = os.path.join(root, rel)
-        if os.path.getsize(p) > limit:
+        if not inside_repo(p) or os.path.getsize(p) > limit:
             return ""
         return open(p, encoding="utf-8", errors="ignore").read()
     except Exception:
@@ -68,6 +93,7 @@ def main():
     if len(sys.argv) < 2 or not os.path.isdir(sys.argv[1]):
         sys.exit(__doc__)
     root = os.path.abspath(sys.argv[1])
+    _CFG["root_real"] = os.path.realpath(root)
     files = list_files(root)
     low = [f.lower() for f in files]
     ext = Counter(os.path.splitext(f)[1].lower() for f in files)
@@ -223,7 +249,7 @@ def main():
         add("app-service", 1, "根目录有可直接运行的入口文件（脚本式应用）")
 
     # ---- script-tool（规模标记）----
-    tiny = code_n and code_n <= 40
+    tiny = 5 <= code_n <= 40  # 需要有一定量的代码才算'小型脚本项目'；纯内容仓库里零星的校验脚本不算
     if tiny:
         add("script-tool", 2, f"仅 {code_n} 个代码文件（小型项目）")
 
@@ -283,6 +309,15 @@ def main():
 
     # 建议
     advice = []
+    KNOWN = {"app-service", "library-framework", "cli-devtool", "agent-skill-plugin", "content-collection",
+             "research-model", "template-config", "script-tool"}
+    hb = [t for t in [primary] + list(secondary) if t in KNOWN]
+    if score.get("script-tool") and "script-tool" not in hb:
+        hb.append("script-tool")
+    if hb:
+        advice.append("**先读类型手册**: " + "、".join(f"references/archetypes/{t}.md" for t in hb))
+    else:
+        advice.append("类型未识别：读完 README 后手动选择 references/archetypes/ 下最接近的手册（可多选）")
     if primary == "content-collection" or (primary == "agent-skill-plugin" and code_n < 20):
         advice += ["content_probe.py（内容/技能包体检，必跑）", "local_probe.py（提交与安全红旗）",
                    "arch_probe.py 对纯内容仓库意义不大，可跳过依赖图，改看信息架构"]

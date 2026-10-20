@@ -49,6 +49,31 @@ RISK_PATTERNS = [
 ]
 
 
+# 所有 git 调用都走这个包装：命令行 -c 优先级高于仓库自带的 .git/config，
+# 避免被评估仓库通过 core.fsmonitor / core.sshCommand / hooksPath 等配置在本机执行命令。
+GIT_SAFE = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+            "-c", "core.sshCommand=false", "-c", "core.pager=cat", "-c", "credential.helper=",
+            "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]
+
+
+_CFG = {"root_real": None}
+
+
+def inside_repo(p):
+    """仓库是不可信数据：拒绝符号链接，且真实路径必须落在仓库目录内，
+    防止恶意仓库用软链接把沙箱里仓库外的文件（密钥、配置等）读进分析输出。"""
+    try:
+        if os.path.islink(p):
+            return False
+        rr = _CFG["root_real"]
+        if rr is None:
+            return True
+        rp = os.path.realpath(p)
+        return rp == rr or rp.startswith(rr + os.sep)
+    except Exception:
+        return False
+
+
 def sh(cmd, cwd):
     try:
         return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=60).stdout
@@ -60,20 +85,24 @@ def main():
     if len(sys.argv) < 2 or not os.path.isdir(sys.argv[1]):
         sys.exit(__doc__)
     root = os.path.abspath(sys.argv[1])
+    _CFG["root_real"] = os.path.realpath(root)
     print(f"# 本地体检: {os.path.basename(root)}\n")
 
     # ---------- git 历史 ----------
     shallow = os.path.exists(os.path.join(root, ".git", "shallow"))
     note_hist = ""
-    if shallow and "--no-unshallow" not in sys.argv:
+    origin = sh(GIT_SAFE + ["config", "--get", "remote.origin.url"], root).strip()
+    if shallow and "--no-unshallow" not in sys.argv and not origin.startswith("https://"):
+        note_hist = "未自动补全历史：origin 不是 https 地址（可能是别人提供的现成目录，出于安全不对其发起 fetch）"
+    if shallow and "--no-unshallow" not in sys.argv and origin.startswith("https://"):
         try:
-            r = subprocess.run(["git", "fetch", "--quiet", "--unshallow", "--filter=blob:none", "origin"],
+            r = subprocess.run(GIT_SAFE + ["fetch", "--quiet", "--unshallow", "--filter=blob:none", "origin"],
                                cwd=root, capture_output=True, text=True, timeout=240)
             shallow = os.path.exists(os.path.join(root, ".git", "shallow"))
             note_hist = "已自动补全完整提交历史（仅元数据，不含历史文件内容）" if not shallow else "补全历史失败，仍是浅克隆"
         except Exception as e:
             note_hist = f"补全历史失败（{str(e)[:40]}），仍是浅克隆"
-    log = sh(["git", "log", "--format=%H|%ae|%aI|%s%n%b%x00"], root)
+    log = sh(GIT_SAFE + ["log", "--format=%H|%ae|%aI|%s%n%b%x00"], root)
     commits = [c for c in log.split("\x00") if c.strip()]
     if commits:
         rows = []
@@ -126,14 +155,14 @@ def main():
         max_depth = max(max_depth, 0 if rel_dir == "." else rel_dir.count(os.sep) + 1)
         for fn in fns:
             p = os.path.join(dp, fn)
-            rel = os.path.relpath(p, root)
+            rel = os.path.relpath(p, root).replace(os.sep, "/")  # 统一正斜杠，Windows 下 TEST_RE/前缀判断才成立
             all_paths.append(rel)
             ext = os.path.splitext(fn)[1].lower()
             if rel.lower().endswith((".env",)) and not rel.endswith(".example"):
                 secrets.append((rel, "仓库里提交了 .env 文件"))
             if ext in TEXT_EXT or fn in (".env", ".env.local", ".npmrc"):
                 try:
-                    if os.path.getsize(p) <= 600_000 and not fn.endswith(("-lock.json", ".lock")) and fn not in ("package-lock.json", "pnpm-lock.yaml", "yarn.lock"):
+                    if os.path.getsize(p) <= 600_000 and inside_repo(p) and not fn.endswith(("-lock.json", ".lock")) and fn not in ("package-lock.json", "pnpm-lock.yaml", "yarn.lock"):
                         tt = open(p, encoding="utf-8", errors="ignore").read()
                         fixture = bool(re.search(r"(^|/)(tests?|__tests__|fixtures?|examples?|samples?|docs?|mocks?)/", rel.lower())) or fn.endswith(".example")
                         for rx, name in SECRET_RES:
@@ -147,7 +176,7 @@ def main():
             if ext not in CODE_EXT:
                 continue
             try:
-                if os.path.getsize(p) > 2_000_000:
+                if os.path.getsize(p) > 2_000_000 or not inside_repo(p):
                     continue
                 text = open(p, encoding="utf-8", errors="ignore").read()
             except Exception:
@@ -190,8 +219,11 @@ def main():
     print("## 依赖规模")
     for f in ("requirements.txt", "pyproject.toml", "package.json", "go.mod", "Cargo.toml"):
         for rel in all_paths:
-            if os.path.basename(rel) == f and rel.count(os.sep) <= 2:
-                text = open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read()
+            if os.path.basename(rel) == f and rel.count("/") <= 2 and inside_repo(os.path.join(root, rel)):
+                try:
+                    text = open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read()
+                except Exception:
+                    continue
                 if f == "requirements.txt":
                     n = len([l for l in text.splitlines() if l.strip() and not l.startswith("#")])
                     pinned = len([l for l in text.splitlines() if "==" in l])

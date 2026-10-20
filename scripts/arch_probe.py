@@ -61,12 +61,37 @@ def walk(root):
         dns[:] = [d for d in dns if d not in SKIP]
         for fn in fns:
             p = os.path.join(dp, fn)
-            yield os.path.relpath(p, root), p
+            yield os.path.relpath(p, root).replace(os.sep, "/"), p  # 统一正斜杠（Windows 兼容）
+
+
+# 所有 git 调用都走这个包装：命令行 -c 优先级高于仓库自带的 .git/config，
+# 避免被评估仓库通过 core.fsmonitor / core.sshCommand / hooksPath 等配置在本机执行命令。
+GIT_SAFE = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+            "-c", "core.sshCommand=false", "-c", "core.pager=cat", "-c", "credential.helper=",
+            "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]
+
+
+_CFG = {"root_real": None}
+
+
+def inside_repo(p):
+    """仓库是不可信数据：拒绝符号链接，且真实路径必须落在仓库目录内，
+    防止恶意仓库用软链接把沙箱里仓库外的文件（密钥、配置等）读进分析输出。"""
+    try:
+        if os.path.islink(p):
+            return False
+        rr = _CFG["root_real"]
+        if rr is None:
+            return True
+        rp = os.path.realpath(p)
+        return rp == rr or rp.startswith(rr + os.sep)
+    except Exception:
+        return False
 
 
 def read(p, limit=1_500_000):
     try:
-        if os.path.getsize(p) > limit:
+        if not inside_repo(p) or os.path.getsize(p) > limit:
             return ""
         return open(p, encoding="utf-8", errors="ignore").read()
     except Exception:
@@ -77,9 +102,13 @@ def main():
     if len(sys.argv) < 2 or not os.path.isdir(sys.argv[1]):
         sys.exit(__doc__)
     root = os.path.abspath(sys.argv[1])
+    _CFG["root_real"] = os.path.realpath(root)
     depth = 3
     if "--depth" in sys.argv:
-        depth = int(sys.argv[sys.argv.index("--depth") + 1])
+        try:
+            depth = int(sys.argv[sys.argv.index("--depth") + 1])
+        except (IndexError, ValueError):
+            pass
     files = list(walk(root))
     print(f"# 架构画像: {os.path.basename(root)}\n")
 
@@ -180,7 +209,8 @@ def main():
 
         def node(rel):
             if fine:  # 文件级：click/core.py -> click.core
-                return rel[:-3].replace("/", ".").removesuffix(".__init__")
+                _m = rel[:-3].replace("/", ".")
+                return _m[: -len(".__init__")] if _m.endswith(".__init__") else _m
             parts = rel.split("/")[:-1]
             return ".".join(parts[:depth]) if parts else "(root)"
         for rel, p in py:
@@ -357,7 +387,7 @@ def main():
     print()
 
     # ---- 6. 变更热点 ----
-    log = sh(["git", "log", "-n", "400", "--name-only", "--format="], root)
+    log = sh(GIT_SAFE + ["log", "-n", "400", "--name-only", "--format="], root)
     cnt_all = Counter(l for l in log.splitlines() if l.strip() and not l.endswith((".md", ".lock", ".json", ".yml", ".yaml", ".txt", ".png", ".svg")))
     gone = sum(n for f, n in cnt_all.items() if not os.path.exists(os.path.join(root, f)))
     cnt = Counter({f: n for f, n in cnt_all.items() if os.path.exists(os.path.join(root, f))})

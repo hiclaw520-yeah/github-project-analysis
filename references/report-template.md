@@ -29,4 +29,4 @@
 - `app-service-panwatch.md` — 完整深度报告（校准深度与证据写法）
 - `gallery-quick-reports.md` — 四种不同类型的快速报告（校准类型适配取舍）
 
-首次使用建议读 `examples/summary.md`（精简摘要）校准语气；完整报告按需加载。
+首次使用先读 `examples/summary.md`（五种类型的精简校准，不止应用型）；需要完整颗粒度再加载上面两份。

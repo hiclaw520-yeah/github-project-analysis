@@ -216,7 +216,7 @@ def render(o):
         print("\n## 活跃度与协作（最近 100 次提交）")
         print(f"- 最近提交 {c['latest_days_ago']} 天前；100 次提交跨度 {c['span_days']} 天（≈{c['commits_per_week']} 次/周）")
         print(f"- 提交者 {c['unique_authors']} 人（按 GitHub 登录名/作者名）；头号作者占比 {c['top_author_share_pct']}%（>85% 视为单人项目）。注意：同一个人常有多个账号/用户名，会被算成多人——**以 local_probe 的按邮箱统计为准**")
-        print(f"- Conventional Commits 占比 {c['conventional_commit_pct']}%；AI 共同作者署名占比 {c['ai_coauthor_trailer_pct']}%；bot 账号 {c['bots'] if 'bots' in c else c['bot_authors']} 个")
+        print(f"- Conventional Commits 占比 {c['conventional_commit_pct']}%；AI 共同作者署名占比 {c['ai_coauthor_trailer_pct']}%；bot 账号 {c['bot_authors']} 个")
     if "contributors" in o:
         print(f"- 贡献者(最多取100): {o['contributors']['count_up_to_100']}；Top3: {o['contributors']['top3']}")
     if "releases" in o:

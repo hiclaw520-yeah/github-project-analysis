@@ -290,7 +290,7 @@ def main():
                 continue
             if tgt.startswith(("#", "mailto:", "tel:", "data:")):
                 continue
-            if PLACEHOLDER_LINK.match(tgt) or f.startswith((".github/", "docs/superpowers/")) and PLACEHOLDER_LINK.search(tgt):
+            if PLACEHOLDER_LINK.match(tgt):
                 continue  # 模板/占位符链接（…、path/to/x、relative/path.md、<url>）不算失效
             total_links += 1
             path = tgt.split("#")[0].split("?")[0]

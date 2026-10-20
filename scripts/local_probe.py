@@ -158,7 +158,7 @@ def main():
             rel = os.path.relpath(p, root).replace(os.sep, "/")  # 统一正斜杠，Windows 下 TEST_RE/前缀判断才成立
             all_paths.append(rel)
             ext = os.path.splitext(fn)[1].lower()
-            if rel.lower().endswith((".env",)) and not rel.endswith(".example"):
+            if rel.lower().endswith(".env"):
                 secrets.append((rel, "仓库里提交了 .env 文件"))
             if ext in TEXT_EXT or fn in (".env", ".env.local", ".npmrc"):
                 try:
@@ -217,9 +217,11 @@ def main():
 
     # ---------- 依赖 ----------
     print("## 依赖规模")
+    dep_found = False
     for f in ("requirements.txt", "pyproject.toml", "package.json", "go.mod", "Cargo.toml"):
         for rel in all_paths:
             if os.path.basename(rel) == f and rel.count("/") <= 2 and inside_repo(os.path.join(root, rel)):
+                dep_found = True
                 try:
                     text = open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read()
                 except Exception:
@@ -239,6 +241,8 @@ def main():
                         pass
                 else:
                     print(f"- {rel}: 存在")
+    if not dep_found:
+        print("- 未发现依赖清单文件（requirements.txt / pyproject.toml / package.json / go.mod / Cargo.toml）")
     print()
 
     # ---------- 工程化信号 ----------

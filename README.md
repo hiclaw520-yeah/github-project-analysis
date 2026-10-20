@@ -61,6 +61,7 @@ github-project-review/
 ├── package.cmd                       # 打包入口（Windows 双击）
 ├── package.sh                        # 打包入口（Unix）
 ├── .gitignore                        # 忽略 dist/ 打包产物
+├── .gitattributes                    # 行尾规范：cmd=CRLF / sh=LF（跨平台）
 ├── references/
 │   ├── architecture-core.md          # 主链路追踪方法
 │   ├── rubric.md                     # 九维评分细则与权重表

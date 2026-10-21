@@ -62,6 +62,10 @@ github-project-review/
 ├── package.sh                        # 打包入口（Unix）
 ├── .gitignore                        # 忽略 dist/ 打包产物
 ├── .gitattributes                    # 行尾规范：cmd=CRLF / sh=LF（跨平台）
+├── .github/workflows/ci.yml          # CI：ubuntu/windows × Python 3.8/3.12 跑测试
+├── tests/test_probes.py              # 自动化测试（夹具驱动的集成测试 + 纯函数单测）
+├── tools/make_fixtures.py            # 离线夹具生成器（攻击/边界样本仓库 ×7 类）
+├── tools/run_regression.py           # 回归比对器：改动前 baseline、改动后 compare
 ├── references/
 │   ├── architecture-core.md          # 主链路追踪方法
 │   ├── rubric.md                     # 九维评分细则与权重表

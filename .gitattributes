@@ -10,3 +10,6 @@
 /package.sh export-ignore
 /scripts/package.py export-ignore
 /dist/ export-ignore
+/.github/ export-ignore
+/tests/ export-ignore
+/tools/ export-ignore

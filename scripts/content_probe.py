@@ -81,7 +81,9 @@ def read(root, rel, limit=600_000):
         p = os.path.join(root, rel)
         if not inside_repo(p) or os.path.getsize(p) > limit:
             return ""
-        return open(p, encoding="utf-8", errors="ignore").read()
+        # utf-8-sig 会剥离文件头的 BOM：Windows 记事本默认按"带 BOM 的 UTF-8"保存，
+        # 不剥的话 \ufeff 会让 startswith("---") 失败，SKILL.md 被误判为缺少 frontmatter
+        return open(p, encoding="utf-8-sig", errors="ignore").read()
     except Exception:
         return ""
 
@@ -112,6 +114,12 @@ def frontmatter(text):
 
 def words(s):
     return set(re.findall(r"[a-z0-9]{3,}|[\u4e00-\u9fff]", s.lower()))
+
+
+def width(s):
+    """显示宽度：CJK（中日韩）字符按 2 计。同样信息量下 60 个拉丁字符 ≈ 30 个汉字，
+    直接用 len() 判"description 过短"对中文不公平。"""
+    return sum(2 if ord(c) > 0x2E7F else 1 for c in s)
 
 
 def jaccard(a, b):
@@ -172,8 +180,8 @@ def main():
             else:
                 if len(desc) > 1024:
                     problems["description 超过 1024 字符"] += 1
-                if len(desc) < 60:
-                    problems["description 过短(<60 字符，难以触发)"] += 1
+                if width(desc) < 60:
+                    problems["description 过短(按 CJK 双宽加权 <60，难以触发)"] += 1
                 if not TRIGGER_RE.search(desc):
                     problems["description 缺少触发场景线索"] += 1
                 descs[s] = desc
@@ -317,6 +325,8 @@ def main():
     # ================= 5. 重复与相似 =================
     print("## 5. 重复与相似")
     ks = list(descs.items())[:400]
+    if len(descs) > len(ks):
+        print(f"- ⚠️ 相似度仅计算前 {len(ks)}/{len(descs)} 个 description（性能截断，其余未比较）")
     sims = []
     ws = {k: words(v) for k, v in ks}
     for i in range(len(ks)):
@@ -338,6 +348,8 @@ def main():
                   and "node_modules" not in f and "/tests/" not in f and not f.startswith("tests/")]
     danger, inj = Counter(), []
     danger_ex = {}
+    if len(scan_files) > 3000:
+        print(f"- ⚠️ 风险扫描仅覆盖前 3000/{len(scan_files)} 个文件（性能截断，其余未扫描）")
     for f in scan_files[:3000]:
         t = read(root, f, 300_000)
         for rx, name in DANGER:

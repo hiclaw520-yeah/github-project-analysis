@@ -10,6 +10,14 @@ import re
 import subprocess
 import sys
 
+# 输出强制 UTF-8（replace 兜底）：中文 Windows 下输出被管道/重定向时，Python 会退回
+# GBK 等本地编码，遇到 ✓ 等字符抛 UnicodeEncodeError 直接中断；统一 UTF-8 后任何编码环境都不崩。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # scripts/ 的上一级
 PREFIX = "github-project-review"
 
@@ -17,7 +25,7 @@ PREFIX = "github-project-review"
 def sh(*cmd):
     """跑一条 git 命令，返回 (是否成功, stdout)；git 不存在也按失败处理。"""
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore")
+        r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     except OSError:
         return False, ""
     return r.returncode == 0, r.stdout or ""

@@ -18,6 +18,15 @@ import json
 import re
 import sys
 import urllib.request
+
+# 输出强制 UTF-8（replace 兜底）：中文 Windows 下输出被管道/重定向时，Python 会退回
+# GBK 等本地编码，遇到 ✓ 等字符抛 UnicodeEncodeError 直接中断；统一 UTF-8 后任何编码环境都不崩。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from datetime import datetime, timezone
 
 UA = "Mozilla/5.0 (compatible; github-project-review)"

@@ -14,6 +14,14 @@ import os
 import re
 import subprocess
 import sys
+
+# 输出强制 UTF-8（replace 兜底）：中文 Windows 下输出被管道/重定向时，Python 会退回
+# GBK 等本地编码，遇到 ✓ 等字符抛 UnicodeEncodeError 直接中断；统一 UTF-8 后任何编码环境都不崩。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
@@ -50,8 +58,10 @@ RISK_PATTERNS = [
 
 
 # 所有 git 调用都走这个包装：命令行 -c 优先级高于仓库自带的 .git/config，
-# 避免被评估仓库通过 core.fsmonitor / core.sshCommand / hooksPath 等配置在本机执行命令。
-GIT_SAFE = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+# 避免被评估仓库通过 core.fsmonitor / core.sshCommand / hooksPath 等配置在本机执行命令；
+# core.quotepath=false 让中文等非 ASCII 路径原样输出（默认会被转义成 "\346\212\200..." 形式，
+# 导致脚本拿它对不上真实文件、漏检中文路径）。
+GIT_SAFE = ["git", "-c", "core.quotepath=false", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
             "-c", "core.sshCommand=false", "-c", "core.pager=cat", "-c", "credential.helper=",
             "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]
 
@@ -76,7 +86,8 @@ def inside_repo(p):
 
 def sh(cmd, cwd):
     try:
-        return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=60).stdout
+        return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", timeout=60).stdout
     except Exception:
         return ""
 
@@ -97,7 +108,8 @@ def main():
     if shallow and "--no-unshallow" not in sys.argv and origin.startswith("https://"):
         try:
             r = subprocess.run(GIT_SAFE + ["fetch", "--quiet", "--unshallow", "--filter=blob:none", "origin"],
-                               cwd=root, capture_output=True, text=True, timeout=240)
+                               cwd=root, capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", timeout=240)
             shallow = os.path.exists(os.path.join(root, ".git", "shallow"))
             note_hist = "已自动补全完整提交历史（仅元数据，不含历史文件内容）" if not shallow else "补全历史失败，仍是浅克隆"
         except Exception as e:

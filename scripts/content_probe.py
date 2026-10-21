@@ -22,6 +22,14 @@ import re
 import statistics
 import subprocess
 import sys
+
+# 输出强制 UTF-8（replace 兜底）：中文 Windows 下输出被管道/重定向时，Python 会退回
+# GBK 等本地编码，遇到 ✓ 等字符抛 UnicodeEncodeError 直接中断；统一 UTF-8 后任何编码环境都不崩。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 from collections import Counter
 
 SKIP = {".git", "node_modules", "venv", ".venv", "dist", "build", "__pycache__"}
@@ -29,7 +37,8 @@ SKIP = {".git", "node_modules", "venv", ".venv", "dist", "build", "__pycache__"}
 
 def list_files(root):
     try:
-        out = subprocess.run(GIT_SAFE + ["ls-files"], cwd=root, capture_output=True, text=True, timeout=60).stdout
+        out = subprocess.run(GIT_SAFE + ["ls-files"], cwd=root, capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", timeout=60).stdout
         fs = [l for l in out.splitlines() if l.strip()]
         if fs:
             return fs
@@ -44,7 +53,7 @@ def list_files(root):
 
 # 所有 git 调用都走这个包装：命令行 -c 优先级高于仓库自带的 .git/config，
 # 避免被评估仓库通过 core.fsmonitor / core.sshCommand / hooksPath 等配置在本机执行命令。
-GIT_SAFE = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+GIT_SAFE = ["git", "-c", "core.quotepath=false", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
             "-c", "core.sshCommand=false", "-c", "core.pager=cat", "-c", "credential.helper=",
             "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]
 

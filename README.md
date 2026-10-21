@@ -108,7 +108,7 @@ github-project-review/
 
 ## 使用前提
 
-- Python 3.8+，Windows / Linux / macOS（已在 3.8.20 与 3.12 上对 11 个不同类型的仓库实测；1.1.2 修复了 Windows 路径分隔符导致的脚本失效与误报）
+- Python 3.8+，Windows / Linux / macOS（已在 Windows 上实测：路径分隔符、管道输出编码（GBK / cp1252 模拟）、中文文件名仓库均正常。1.1.2 修复 Windows 路径分隔符导致的脚本失效与误报；1.1.3 修复非 UTF-8 编码下的输出崩溃与提交历史静默丢失、中文路径转义漏检）
 - git（只读克隆）
 - 网络访问 GitHub
 
@@ -124,14 +124,17 @@ github-project-review/
 ## 安装
 
 将本目录放入 Agent 的 skills 路径下即可，脚本只用标准库，无需 `pip install`。
-**打包分发时不要带上 `.git/`**（会带上远程地址、提交者邮箱等信息）。一键打包（内容 = HEAD 提交，自动读版本号命名，产物在 `dist/`，天然不含 `.git/`）：
+
+> 以下打包入口**仅供仓库维护者**使用；使用者把目录放进 skills 路径即可，无需打包。
+
+**打包分发时不要带上 `.git/`**（会带上远程地址、提交者邮箱等信息）。一键打包（内容 = HEAD 提交，自动读版本号命名，产物在 `dist/`，天然不含 `.git/`，开发期文件如打包脚本本身经 `export-ignore` 排除）：
 
 - Windows：双击 `package.cmd`
 - Unix：`./package.sh` 或 `python3 scripts/package.py`
 
 ## 版本
 
-当前版本 1.1.2（2026-10-20）。版本号写在 `SKILL.md` 的 `metadata` 中。
+当前版本 1.1.3（2026-10-21）。版本号写在 `SKILL.md` 的 `metadata` 中。
 
 ## 许可
 

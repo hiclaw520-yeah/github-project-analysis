@@ -2,3 +2,11 @@
 *.cmd text eol=crlf
 *.bat text eol=crlf
 *.sh text eol=lf
+
+# 开发期文件不进分发包（git archive 遵循 export-ignore）
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/package.cmd export-ignore
+/package.sh export-ignore
+/scripts/package.py export-ignore
+/dist/ export-ignore

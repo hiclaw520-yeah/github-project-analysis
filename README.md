@@ -60,7 +60,7 @@ github-project-review/
 ├── LICENSE                           # MIT
 ├── package.cmd                       # 打包入口（Windows 双击）
 ├── package.sh                        # 打包入口（Unix）
-├── .gitignore                        # 忽略 dist/ 打包产物
+├── .gitignore                        # 忽略 dist/、__pycache__/、tests/.baseline/
 ├── .gitattributes                    # 行尾规范：cmd=CRLF / sh=LF（跨平台）
 ├── .github/workflows/ci.yml          # CI：ubuntu/windows × Python 3.8/3.12 跑测试
 ├── tests/test_probes.py              # 自动化测试（夹具驱动的集成测试 + 纯函数单测）
@@ -138,7 +138,7 @@ github-project-review/
 
 ## 版本
 
-当前版本 1.1.4（2026-10-21）。版本号写在 `SKILL.md` 的 `metadata` 中。
+当前版本 1.1.4（2026-10-21）。版本号写在 `SKILL.md` 的 `metadata` 中。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可
 

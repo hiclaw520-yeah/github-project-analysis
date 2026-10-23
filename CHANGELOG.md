@@ -2,6 +2,22 @@
 
 本项目版本号写在 `SKILL.md` 的 `metadata` 块中，遵循语义化版本。
 
+## [1.1.6] — 2026-10-23
+
+### Fixed
+
+- **回归修复**：仓库里任何位置存在 SKILL.md 都会关闭"文档占比/精选词"内容信号——`.claude/skills/`、`.agents/skills/` 等仓库自带的开发辅助技能会把纯教程/文档仓库整体误判成 agent-skill-plugin。现在只有根目录或 `skills/<name>/` 布局的 SKILL.md 才压制内容信号；文件数 ≤5 的极小仓库里 SKILL.md 就是本体，技能信号保底 4 分（`classify_repo.py`）
+- **回归修复（安全）**：`-r/--requirement` 递归展开未走读文件防护，`-r /etc/passwd`、`-r ../xxx` 或指向仓库外的符号链接会把仓库外文件的行数并进依赖数。现在拒绝绝对路径与 `..` 越界引用，并复用 `inside_repo`（拒绝符号链接、真实路径必须落在仓库内）（`local_probe.py`）
+- 无依赖清单的仓库（纯技能包/纯文档）不再输出"锁文件 ✗ 未发现（依赖不可复现）"误导行（`local_probe.py`）
+- `pyproject.toml` 的 PEP 621 表格写法（`license = {text = "..."}` / `{file = "..."}`）与 `License :: OSI Approved ::` classifiers 现在能被识别为许可证声明，不再误报"清单也无声明"（`local_probe.py`）
+- `rubric.md` 结论映射边界修正：恰好 3.8 分回到 🟢（`[2.8, 3.8)` → 🟡、`≥ 3.8` → 🟢），与 examples 既有结论一致
+- README 末尾误留的空代码块
+
+### Tests
+
+- 夹具增至 9 类：新增 `dev_skill_docs`（仅带 `.claude/skills/` 开发辅助技能的教程仓库 + 表格式 license 声明）；`env_files` 的 requirements.txt 加入 `../` 越界与绝对路径两条仓库外 `-r` 引用（指向夹具目录外的恶意外部文件）
+- 测试 14 → 18 个：新增开发辅助技能不压制内容分类、`-r` 路径安全、无依赖不输出锁文件行、表格式 license 识别 4 项
+
 ## [1.1.5] — 2026-10-23
 
 ### Fixed

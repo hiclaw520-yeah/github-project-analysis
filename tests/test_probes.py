@@ -138,6 +138,29 @@ class ProbeTests(unittest.TestCase):
         self.assertIn("合计 3 个依赖", out)
         self.assertIn("锁文件: ✓ package-lock.json", out)
 
+    def test_dev_skill_docs_still_content(self):
+        """仅 .claude/skills/ 开发辅助技能的教程仓库仍判内容合集，不被技能信号压制（1.1.6 回归修复）。"""
+        _, out = run_probe("classify_repo", self.fx["dev_skill_docs"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`content-collection`", out),
+                        "开发辅助技能误压制内容信号:\n%s" % out[:500])
+
+    def test_dep_expansion_path_safety(self):
+        """-r 引用不得越过仓库边界：../ 相对越界与绝对路径引用不读、不计入（1.1.6）。"""
+        _, out = run_probe("local_probe", self.fx["env_files"])
+        self.assertIn("合计 3 个依赖", out)  # 两条仓库外越界引用不计入
+        self.assertNotIn("evil-outside-pkg", out)
+
+    def test_lockfile_line_only_with_deps(self):
+        """无依赖清单的仓库（纯技能包/纯文档）不再输出"锁文件 ✗"误导行（1.1.6）。"""
+        _, out = run_probe("local_probe", self.fx["single_skill"])
+        self.assertNotIn("锁文件", out)
+
+    def test_pyproject_table_license(self):
+        """PEP 621 表格写法 license = {text = "MIT"} 被识别为清单声明（1.1.6）。"""
+        _, out = run_probe("local_probe", self.fx["dev_skill_docs"])
+        self.assertIn("pyproject.toml 声明为 MIT", out)
+        self.assertNotIn("清单也无声明", out)
+
 
 if __name__ == "__main__":
     unittest.main()

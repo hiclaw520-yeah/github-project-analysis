@@ -172,7 +172,12 @@ def main():
         add("agent-skill-plugin", 4 if skill_md_root == 1 else 6,
             f"{skill_md_root} 个根/skills 布局 SKILL.md（技能包强信号）")
     elif skill_md:
-        add("agent-skill-plugin", min(6, 2 + skill_md // 5), f"{skill_md} 个 SKILL.md")
+        pts = min(6, 2 + skill_md // 5)
+        if n <= 5:
+            # 文件极少的仓库里 SKILL.md 就是本体（如中文路径下的单技能小仓库），
+            # 技能信号给保底分，避免被"文档占比"反超（1.1.6）
+            pts = max(pts, 4)
+        add("agent-skill-plugin", pts, f"{skill_md} 个 SKILL.md")
     if manifests:
         add("agent-skill-plugin", 3, f"插件/市场清单 {len(manifests)} 个（如 {manifests[0]}）")
     if cmd_md or agent_md:
@@ -181,10 +186,11 @@ def main():
         add("agent-skill-plugin", 3, "MCP 服务/SDK 线索")
 
     # ---- content-collection ----
-    # 有 SKILL.md 的仓库不因"文档占比高/精选词"判成内容合集——技能包本身就是 md 为主的仓库
-    if n and doc_n / n > 0.65 and code_n < 15 and not skill_md:
+    # 有根/skills 布局 SKILL.md 的仓库不因"文档占比高/精选词"判成内容合集——技能包本身就是
+    # md 为主的仓库；但 .claude/skills/、.agents/skills/ 等开发辅助技能不算（1.1.6 回归修复）
+    if n and doc_n / n > 0.65 and code_n < 15 and not skill_md_root:
         add("content-collection", 4, f"文档占比 {doc_n * 100 // n}%、代码文件仅 {code_n}")
-    if re.search(r"awesome|curated list", readme[:1500]) and doc_n >= code_n and not skill_md:
+    if re.search(r"awesome|curated list", readme[:1500]) and doc_n >= code_n and not skill_md_root:
         add("content-collection", 2, "README 呈现 awesome/curated list 特征")
     if has(lambda p: re.search(r"(^|/)(chapters?|lessons?|book|course|tutorial)s?/", p) is not None):
         add("content-collection", 2, "含 chapters/lessons/book/tutorial 目录")

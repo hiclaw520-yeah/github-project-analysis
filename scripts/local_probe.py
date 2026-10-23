@@ -234,12 +234,20 @@ def main():
                         if re.search(r"(^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb|poetry\.lock|uv\.lock|Cargo\.lock|go\.sum|Pipfile\.lock)$", p)})
 
     def count_reqs(path, seen, depth=0):
-        """requirements.txt 实际依赖数：-r/--requirement 引用递归展开（防环，深度限 3）。"""
+        """requirements.txt 实际依赖数：-r/--requirement 引用递归展开（防环，深度限 3）。
+
+        仓库是不可信数据：引用不得越过仓库边界——拒绝绝对路径与 `..` 越界，
+        并复用 inside_repo（拒绝符号链接、真实路径必须落在仓库内），
+        防止恶意 requirements.txt 把仓库外文件的行数并进依赖数（1.1.6）。
+        """
         if depth > 3 or path in seen:
             return 0
         seen.add(path)
+        full = os.path.join(root, path)
+        if not inside_repo(full):
+            return 0
         try:
-            lines = open(os.path.join(root, path), encoding="utf-8", errors="ignore").read().splitlines()
+            lines = open(full, encoding="utf-8", errors="ignore").read().splitlines()
         except Exception:
             return 0
         n = 0
@@ -250,7 +258,10 @@ def main():
             m = re.match(r"^-r\s+(.+)$|^--requirement\s+(.+)$", l)
             if m:
                 ref = (m.group(1) or m.group(2)).strip().strip('"\'')
-                n += count_reqs(os.path.normpath(os.path.join(os.path.dirname(path), ref)).replace("\\", "/"), seen, depth + 1)
+                rel = os.path.normpath(os.path.join(os.path.dirname(path), ref.replace("\\", "/"))).replace("\\", "/")
+                if os.path.isabs(ref) or rel == ".." or rel.startswith("../"):
+                    continue  # 越界引用：不读、不计入
+                n += count_reqs(rel, seen, depth + 1)
             elif not l.startswith(("-e ", "--editable", "-f ", "--find-links", "-i ", "--index-url", "--extra-index-url", "--trusted-host", "-c ", "--constraint")):
                 n += 1
         return n
@@ -295,7 +306,8 @@ def main():
                     print(f"- {rel}: 存在")
     if lockfiles:
         print(f"- 锁文件: ✓ {', '.join(lockfiles)}（依赖可复现）")
-    else:
+    elif dep_found:
+        # 没有依赖清单的仓库（纯技能包/纯文档）谈不上"依赖不可复现"，不输出误导行（1.1.6）
         print("- 锁文件: ✗ 未发现（依赖不可复现，rubric D 的验证性扣分点）")
     if not dep_found:
         print("- 未发现依赖清单文件（requirements.txt / pyproject.toml / package.json / go.mod / Cargo.toml）")
@@ -337,10 +349,23 @@ def main():
                     t = open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read(20000)
                 except Exception:
                     continue
-                m = (re.search(r'(?m)^\s*license\s*=\s*["\']?([^"\'{}\n]+)', t) if rel.lower() == "pyproject.toml"
-                     else re.search(r'"license"\s*:\s*"([^"]+)"', t))
-                if m:
-                    lic = m.group(1).strip()
+                if rel.lower() == "pyproject.toml":
+                    # SPDX 字符串 / poetry 写法；PEP 621 表格 {text=..} 或 {file=..}；只写 classifiers 的情况
+                    m = (re.search(r'(?m)^\s*license\s*=\s*"([^"\n]+)"', t)
+                         or re.search(r'(?m)^\s*license\s*=\s*\{[^}\n]*"([^"\n]+)"', t))
+                    if m:
+                        lic = m.group(1).strip()
+                    elif re.search(r'(?m)^\s*license\s*=\s*\{', t):
+                        lic = "license 字段（表格写法，值需人工读取）"
+                    else:
+                        cm = re.search(r'(?i)license\s*::\s*osi approved\s*::\s*([^"\n]+?)"', t)
+                        if cm:
+                            lic = cm.group(1).strip() + "（classifiers 声明）"
+                else:
+                    m = re.search(r'"license"\s*:\s*"([^"]+)"', t)
+                    if m:
+                        lic = m.group(1).strip()
+                if lic:
                     break
         if lic:
             print(f"- LICENSE: 根目录未检出许可证文件，但 {rel} 声明为 {lic}——以声明为准并人工核实全文")

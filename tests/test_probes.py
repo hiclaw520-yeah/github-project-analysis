@@ -161,6 +161,18 @@ class ProbeTests(unittest.TestCase):
         self.assertIn("pyproject.toml 声明为 MIT", out)
         self.assertNotIn("清单也无声明", out)
 
+    def test_team_handbook_still_content(self):
+        """极小仓库带开发辅助技能且文档多于 SKILL.md 时判内容合集，技能保底不生效（1.1.8）。"""
+        _, out = run_probe("classify_repo", self.fx["team_handbook"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`content-collection`", out),
+                        "开发辅助技能被保底分抬成主类型:\n%s" % out[:500])
+
+    def test_pyproject_file_license(self):
+        """pyproject 的 {file = "LICENSE"} 输出为"引用的许可证文件"，不把文件名当许可证名（1.1.8）。"""
+        _, out = run_probe("local_probe", self.fx["team_handbook"])
+        self.assertIn("引用的许可证文件 LICENSE", out)
+        self.assertNotIn("声明为 LICENSE", out)
+
 
 if __name__ == "__main__":
     unittest.main()

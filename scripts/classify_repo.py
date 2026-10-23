@@ -173,9 +173,10 @@ def main():
             f"{skill_md_root} 个根/skills 布局 SKILL.md（技能包强信号）")
     elif skill_md:
         pts = min(6, 2 + skill_md // 5)
-        if n <= 5:
-            # 文件极少的仓库里 SKILL.md 就是本体（如中文路径下的单技能小仓库），
-            # 技能信号给保底分，避免被"文档占比"反超（1.1.6）
+        if n <= 5 and doc_n == skill_md:
+            # 极小仓库且 SKILL.md 是唯一文档——技能就是仓库本体（如中文路径下的单技能小仓库），
+            # 技能信号给保底分，避免被"文档占比"反超（1.1.6）；
+            # 团队手册等带开发辅助技能的小仓库（文档多于 SKILL.md）不在此列（1.1.8 修正）
             pts = max(pts, 4)
         add("agent-skill-plugin", pts, f"{skill_md} 个 SKILL.md")
     if manifests:

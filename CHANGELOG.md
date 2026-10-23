@@ -2,6 +2,18 @@
 
 本项目版本号写在 `SKILL.md` 的 `metadata` 块中，遵循语义化版本。
 
+## [1.1.8] — 2026-10-23
+
+### Fixed
+
+- 极小仓库的技能保底分收紧：`n <= 5` 时还需 SKILL.md 是仓库**唯一文档**（`doc_n == skill_md`）才保底——"4 个文件的团队手册 + 1 个 `.claude/skills/` 开发辅助技能"不再被抬成 agent-skill-plugin；中文路径下的单技能小仓库（SKILL.md 即全部文档）行为不变（`classify_repo.py`）
+- `pyproject.toml` 的 `license = {file = "LICENSE"}` 输出改为"引用的许可证文件 LICENSE"，不把文件名当许可证名；`{text = ...}` 形式解析独立（`local_probe.py`）
+- 通用文档中的具名轶事改为不带数字的通用表述（示例仓库的快照数字只保留在带采集日期与免责的 examples 里）：SKILL.md"页面提交数可能与克隆差几个数量级"、rubric 两处"热门项目也可能藏着巨大的上帝类"、peer-comparison 同步
+
+### Tests
+
+- 夹具增至 10 类（新增 team_handbook）；测试 18 → 20 个（团队手册不被保底抬成技能包、file 形式 license 措辞）
+
 ## [1.1.7] — 2026-10-23
 
 ### Changed

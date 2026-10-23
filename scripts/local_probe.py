@@ -351,10 +351,16 @@ def main():
                     continue
                 if rel.lower() == "pyproject.toml":
                     # SPDX 字符串 / poetry 写法；PEP 621 表格 {text=..} 或 {file=..}；只写 classifiers 的情况
-                    m = (re.search(r'(?m)^\s*license\s*=\s*"([^"\n]+)"', t)
-                         or re.search(r'(?m)^\s*license\s*=\s*\{[^}\n]*"([^"\n]+)"', t))
+                    m = re.search(r'(?m)^\s*license\s*=\s*"([^"\n]+)"', t)
+                    fm = re.search(r'(?m)^\s*license\s*=\s*\{\s*file\s*=\s*"([^"\n]+)"', t)
+                    tm = re.search(r'(?m)^\s*license\s*=\s*\{\s*text\s*=\s*"([^"\n]+)"', t)
                     if m:
                         lic = m.group(1).strip()
+                    elif fm:
+                        # file 形式的值是文件名不是许可证名，措辞要区分（1.1.8）
+                        lic = f"引用的许可证文件 {fm.group(1).strip()}"
+                    elif tm:
+                        lic = tm.group(1).strip()
                     elif re.search(r'(?m)^\s*license\s*=\s*\{', t):
                         lic = "license 字段（表格写法，值需人工读取）"
                     else:

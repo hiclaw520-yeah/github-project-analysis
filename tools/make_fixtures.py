@@ -12,6 +12,7 @@
   7. src_layout          src/<pkg>/ 布局
   8. single_skill        根 SKILL.md 单技能仓库（1.1.5 修复的分类/name 误判场景）
   9. dev_skill_docs      仅带 .claude/skills/ 开发辅助技能的教程仓库（1.1.6 回归修复场景）
+ 10. team_handbook       极小团队手册 + 开发辅助技能：文档多于 SKILL.md，保底不生效（1.1.8 场景）
 """
 import os
 import subprocess
@@ -162,6 +163,20 @@ def build_all(out):
     write(os.path.join(dv, "pyproject.toml"),
           '[project]\nname = "tutorial-docs"\nversion = "0.1.0"\nlicense = {text = "MIT"}\n')
     commit(dv)
+
+    # 10. 极小团队手册 + 开发辅助技能（1.1.8 修正场景）：
+    #     文档多于 SKILL.md 时"SKILL.md 是本体"的保底不得生效，应判内容合集；
+    #     pyproject 用 {file = "LICENSE"} 表格写法，验证 file 形式措辞（不把文件名当许可证名）
+    tb = os.path.join(out, "team_handbook")
+    made["team_handbook"] = tb
+    write(os.path.join(tb, "README.md"), "# 团队手册\n\n新人入门与协作规范。\n")
+    write(os.path.join(tb, "handbook", "basics.md"), "# 基础规范\n\n日常协作规则。\n")
+    write(os.path.join(tb, "handbook", "advanced.md"), "# 进阶规范\n\n发布与值班流程。\n")
+    write(os.path.join(tb, ".claude", "skills", "release", "SKILL.md"),
+          skill("release-helper", "仓库维护者的发布流程辅助技能（开发辅助夹具，不代表仓库类型）"))
+    write(os.path.join(tb, "pyproject.toml"),
+          '[project]\nname = "team-handbook"\nversion = "0.1.0"\nlicense = {file = "LICENSE"}\n')
+    commit(tb)
 
     return made
 

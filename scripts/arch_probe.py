@@ -432,6 +432,11 @@ def main():
         print(f"- 函数总数 {len(longest_fn)}；>100 行的函数 {over100} 个（{over100 * 100 // max(len(longest_fn), 1)}%）")
         print(f"- 最长 6 个函数: {longest_fn[:6]}")
         print(f"- 最长 4 个类（>1000 行基本是'上帝类'）: {longest_cls[:4]}")
+        non_py = [(n, rel) for n, rel in big_files if not rel.endswith(".py")]
+        if non_py:
+            # 混合语言仓库：TS/Go 等没有函数级数据，明确标注并列出最大的非 Python 文件作替代线索
+            print(f"- 注意：函数级测量仅覆盖 Python；非 Python 源码 {len(non_py)} 个文件（最大 {non_py[:3]}）无函数数据，"
+                  "请结合文件体量与抽样阅读评估")
     print("\n> 热点 = 需求集中地，也是缺陷集中地；同时是大文件的，是最该先读/最该怀疑的文件。")
     print("> 以上全部是线索，不是结论：请沿一条端到端主链路读代码验证（见 references/architecture-core.md）。")
 

@@ -114,7 +114,7 @@ github-project-review/
 
 ## 使用前提
 
-- Python 3.8+，Windows / Linux / macOS（已在 Windows 上实测：路径分隔符、管道输出编码（GBK / cp1252 模拟）、中文文件名仓库、带 BOM 的 SKILL.md 均正常。1.1.2 修复 Windows 路径分隔符导致的脚本失效与误报；1.1.3 修复非 UTF-8 编码下的输出崩溃与提交历史静默丢失、中文路径转义漏检；1.1.4 修复带 BOM 的 SKILL.md 被误判为缺少 frontmatter、中文 description 被"过短"阈值误判、性能截断静默无提示；1.1.5 修复单技能仓库被误判为内容合集、注入正则的常见词误报、LICENSE 检测两处偏差，并增强依赖统计（-r 展开、锁文件检测、monorepo 任意层级）；1.1.6 修复开发辅助技能（.claude/skills/ 等）误压制内容分类、-r 展开绕过读文件防护两个 1.1.5 回归，并修正 3.8 分结论边界）
+- Python 3.8+，Windows / Linux / macOS（已在 Windows 上实测：路径分隔符、管道输出编码（GBK / cp1252 模拟）、中文文件名仓库、带 BOM 的 SKILL.md 均正常。1.1.2 修复 Windows 路径分隔符导致的脚本失效与误报；1.1.3 修复非 UTF-8 编码下的输出崩溃与提交历史静默丢失、中文路径转义漏检；1.1.4 修复带 BOM 的 SKILL.md 被误判为缺少 frontmatter、中文 description 被"过短"阈值误判、性能截断静默无提示；1.1.5 修复单技能仓库被误判为内容合集、注入正则的常见词误报、LICENSE 检测两处偏差，并增强依赖统计（-r 展开、锁文件检测、monorepo 任意层级）；1.1.6 修复开发辅助技能（.claude/skills/ 等）误压制内容分类、-r 展开绕过读文件防护两个 1.1.5 回归，并修正 3.8 分结论边界；1.1.7 补混合语言仓库的函数测量标注（仅 Python）与示例报告的采集日期/引用免责）
 - git（只读克隆）
 - 网络访问 GitHub
 
@@ -140,7 +140,7 @@ github-project-review/
 
 ## 版本
 
-当前版本 1.1.6（2026-10-23）。版本号写在 `SKILL.md` 的 `metadata` 中。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 1.1.7（2026-10-23）。版本号写在 `SKILL.md` 的 `metadata` 中。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可
 

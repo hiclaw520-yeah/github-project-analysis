@@ -12,7 +12,7 @@
 | `classify_repo.py` | 本地仓库路径 | Markdown / JSON | 项目类型识别、规模档位、领域线索、建议启用哪些分析脚本 |
 | `arch_probe.py` | 本地仓库路径 | Markdown | 目录规模图、入口点、技术栈、模块依赖图、运行形态线索、变更热点 |
 | `content_probe.py` | 本地仓库路径 | Markdown | SKILL.md 完整性、清单校验、链接有效性、风险扫描（不执行仓库脚本） |
-| `package.py` | 无（读 HEAD） | `dist/*.zip` | 一键打包分发，产物不含 `.git/`，开发期文件 `export-ignore` |
+| `package.py` | 无（读 HEAD） | `dist/*.zip` | 一键打包分发，产物不含 `.git/`，开发期文件 `export-ignore`。**仅维护者环境需要；分发包不含此脚本** |
 
 ## 执行顺序
 

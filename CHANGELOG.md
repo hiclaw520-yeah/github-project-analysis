@@ -2,6 +2,29 @@
 
 本项目版本号写在 `SKILL.md` 的 `metadata` 块中，遵循语义化版本。
 
+## [1.1.5] — 2026-10-23
+
+### Fixed
+
+- 单技能仓库（根 `SKILL.md` 或 `skills/<name>/SKILL.md`）被"文档占比"误判为 content-collection：技能包布局现在给 4/6 分强信号，有 SKILL.md 时"文档占比/精选词"不再给内容合集加分（`classify_repo.py`）
+- 根目录 `SKILL.md` 的 name 被拿去与克隆目录名比对导致误报；克隆目录名任意，该比对只对子目录技能生效（`content_probe.py`）
+- 注入措辞正则漏词边界：`README`、`category`、`blueprint` 等普通词命中"读取敏感文件"（`content_probe.py`）
+- LICENSE 检测：只认根目录（子目录 `third_party/lib/LICENSE` 不再冒充），文件名补齐 `COPYING` / `LICENCE` / `unlicense`；检不出时输出"需人工核实"并尝试读取 pyproject/package.json 的 license 声明，不再直接判无（`local_probe.py`）
+- 依赖统计：`requirements.txt` 的 `-r/--requirement` 引用递归展开计入总数；`pyproject.toml`（PEP621/poetry）、`go.mod`、`Cargo.toml` 从"存在"改为实际计数（`local_probe.py`）
+- 新增锁文件检测：package-lock.json / pnpm-lock.yaml / yarn.lock / poetry.lock / uv.lock / Cargo.lock / go.sum 等，缺失时按 rubric D 提示（`local_probe.py`）
+- monorepo 标志文件（pnpm-workspace.yaml / lerna.json / turbo.json / nx.json / go.work）从只认根目录改为任意层级（`local_probe.py`）
+
+### Changed
+
+- 安全守则消除自相矛盾：`extra-checks.md` 第 1 节试跑规程补齐前置条件（一次性容器、无密钥、先审计安装钩子、`--ignore-scripts`），与 SKILL.md"不执行未审阅代码"统一为"条件全满足才试跑，否则静态审阅"
+- `rubric.md` 结论映射改为优先级判定（一票否决/低分 > 单项≤1 封顶 🟡 > 总分），并说明 N/A 归一化的具体算法
+- SKILL.md 命令块标注需先 `cd` 到 skill 目录（相对路径）
+
+### Tests
+
+- 夹具增至 8 类（新增 single_skill 单技能仓库）；env_files 夹具扩展依赖展开/锁文件/子目录 LICENSE
+- 测试 14 个：新增单技能分类、注入词边界、LICENSE 根目录规则、依赖展开与锁文件 5 项；中文技能仓库的过时断言（固化了分错类行为）随修复修正
+
 ## [1.1.4] — 2026-10-21
 
 ### Fixed
@@ -37,6 +60,15 @@
 - Windows 路径分隔符导致脚本失效与误报
 - 文档打磨：README 结构、使用前提、安装方式
 
+## [1.1.1] — 2026-10-19
+
+### Fixed
+
+- `SKILL.md` frontmatter 格式规范化
+- Python 3.8 兼容性（去除 3.9+ 语法依赖）
+- 类型手册的路由与相互引用修正
+- 安全守则补齐（仓库文字当数据不当指令、不执行未审阅仓库代码）
+
 ## [1.1.0] — 2026-10-19
 
 ### Added
@@ -45,7 +77,7 @@
 - 七步工作流：确认目的 → 采集数据 → 类型识别 → 深度阅读 → 同类对比 → 九维评分 → 输出报告
 - 8 种项目类型分析手册（`references/archetypes/`）
 - 3 个领域专项清单（量化交易、AI Agent、安全双重用途）
-- 7 个数据采集脚本（`scripts/`，纯标准库）
+- 6 个数据采集脚本（`scripts/`，纯标准库；打包工具 `package.py` 于 1.1.2 加入）
 - 九维评分体系与类型权重调整表（`references/rubric.md`）
 - 2 份完整示例报告（`references/examples/`）
 - 安全守则：符号链接防护、git 危险配置屏蔽、只读克隆

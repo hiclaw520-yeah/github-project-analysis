@@ -2,14 +2,15 @@
 """离线测试夹具生成器：一次性生成探针脚本的全部攻击/边界样本仓库。
 
 用法：python tools/make_fixtures.py <目标目录>
-生成 7 类样本（每类一个子目录），供 tests/test_probes.py 断言：
+生成 8 类样本（每类一个子目录），供 tests/test_probes.py 断言：
   1. symlink_attack      SKILL.md 软链到仓库外的秘密文件（Windows 无特权时自动跳过并留标记）
   2. malicious_gitconfig .git/config 带恶意 fsmonitor（若被执行会留下 PWNED 标记文件）
   3. chinese_paths       中文目录/文件名 + 1 条失效相对链接
-  4. env_files           提交了 .env（假密钥）与 .env.example
+  4. env_files           .env（假密钥）、依赖 -r 展开、锁文件、子目录 LICENSE
   5. bom_crlf_skill      带 BOM 与 CRLF 的 SKILL.md（1.1.4 修复的误判场景）
   6. dependency_cycles   硬环 a<->b 顶层互导 + 软环 c<->d 延迟导入
   7. src_layout          src/<pkg>/ 布局
+  8. single_skill        根 SKILL.md 单技能仓库（1.1.5 修复的分类/name 误判场景）
 """
 import os
 import subprocess
@@ -77,11 +78,15 @@ def build_all(out):
           skill("cn-skill", "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
     commit(cn)
 
-    # 4. .env 文件
+    # 4. .env 文件 + 依赖展开 + 锁文件 + 子目录 LICENSE（不冒充根 LICENSE）
     env = os.path.join(out, "env_files")
     made["env_files"] = env
     write(os.path.join(env, ".env"), "API_KEY=FAKE_KEY_NOT_REAL_123456\n")
     write(os.path.join(env, ".env.example"), "API_KEY=your-key-here\n")
+    write(os.path.join(env, "requirements.txt"), "-r requirements-rt.txt\npytest\nrequests\n")
+    write(os.path.join(env, "requirements-rt.txt"), "numpy==2.0.0\n")
+    write(os.path.join(env, "package-lock.json"), "{}\n")
+    write(os.path.join(env, "third_party", "lib", "LICENSE"), "MIT\n")
     write(os.path.join(env, "demo-skill", "SKILL.md"),
           skill("demo-skill", "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
     commit(env)
@@ -127,6 +132,17 @@ def build_all(out):
     for i in (1, 2):
         write(os.path.join(sl, "src", "mypkg", "m%d.py" % i), "VALUE = %d\n" % i)
     commit(sl)
+
+    # 8. 单技能仓库：根 SKILL.md（name 与仓库目录名故意不同）+ 文档占比超 65%
+    #    修复前会被"文档占比"判成 content-collection，且 name 被拿去和克隆目录名比对
+    ss = os.path.join(out, "single_skill")
+    made["single_skill"] = ss
+    write(os.path.join(ss, "SKILL.md"),
+          skill("single-skill", "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
+    for g in ("guide", "faq", "tips", "notes"):
+        write(os.path.join(ss, "references", "%s.md" % g), "# %s\n\n正文内容。\n" % g)
+    write(os.path.join(ss, "scripts", "run.py"), "print('hi')\n")
+    commit(ss)
 
     return made
 

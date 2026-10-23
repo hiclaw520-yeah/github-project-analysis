@@ -6,6 +6,7 @@
 symlink 样本自动 skip。全部只用标准库，Python 3.8+。
 """
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -57,11 +58,11 @@ class ProbeTests(unittest.TestCase):
                          "仓库自带 fsmonitor 被执行了——GIT_SAFE 防护失效！")
 
     def test_chinese_paths_detected(self):
-        """中文目录/文件名不被 git 转义漏检，失效链接精确计数。"""
+        """中文目录/文件名不被 git 转义漏检；中文技能仓库主类型是技能包（1.1.5 修正）。"""
         repo = self.fx["chinese_paths"]
         _, cls_out = run_probe("classify_repo", repo)
-        self.assertIn("content-collection", cls_out)
-        self.assertIn("agent-skill-plugin", cls_out)
+        self.assertTrue(re.search(r"主类型\*\*:\s*`agent-skill-plugin`", cls_out),
+                        "中文技能仓库被分错类:\n%s" % cls_out[:400])
         _, out = run_probe("content_probe", repo)
         self.assertIn("失效 1 个", out)
 
@@ -106,6 +107,36 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(body.strip(), "正文")
         fm2, _ = cp.frontmatter("没有 frontmatter")
         self.assertIsNone(fm2)
+
+    def test_single_skill_classified_as_skill(self):
+        """根 SKILL.md 单技能仓库：主类型必须是技能包，不因文档占比高判成内容合集（1.1.5）。"""
+        _, out = run_probe("classify_repo", self.fx["single_skill"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`agent-skill-plugin`", out),
+                        "单技能仓库被分错类:\n%s" % out[:500])
+
+    def test_root_skill_name_no_dir_check(self):
+        """根 SKILL.md 的 name 不与克隆目录名比对（1.1.5）。"""
+        _, out = run_probe("content_probe", self.fx["single_skill"])
+        self.assertNotIn("name 与目录名不一致", out)
+        self.assertNotIn("缺少 frontmatter", out)
+
+    def test_injection_word_boundary(self):
+        """注入正则必须带词边界：README/category 等普通词不得误报（1.1.5）。"""
+        for text in ("README and then copy .env", "see the category page", "check the blueprint"):
+            self.assertFalse(any(p.search(text) for p, _ in cp.INJECTION), text)
+        self.assertTrue(any(p.search("cat ~/.ssh/id_rsa") for p, _ in cp.INJECTION))
+
+    def test_license_root_only_with_hint(self):
+        """子目录 LICENSE 不冒充根许可证；检不出时提示人工核实而非判无（1.1.5）。"""
+        _, out = run_probe("local_probe", self.fx["env_files"])
+        self.assertIn("LICENSE✗", out)
+        self.assertIn("需人工核实", out)
+
+    def test_dep_expansion_and_lockfile(self):
+        """-r 引用递归展开计入依赖数；锁文件单独报告（1.1.5）。"""
+        _, out = run_probe("local_probe", self.fx["env_files"])
+        self.assertIn("合计 3 个依赖", out)
+        self.assertIn("锁文件: ✓ package-lock.json", out)
 
 
 if __name__ == "__main__":

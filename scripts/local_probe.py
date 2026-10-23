@@ -230,6 +230,31 @@ def main():
     # ---------- 依赖 ----------
     print("## 依赖规模")
     dep_found = False
+    lockfiles = sorted({p for p in all_paths
+                        if re.search(r"(^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb|poetry\.lock|uv\.lock|Cargo\.lock|go\.sum|Pipfile\.lock)$", p)})
+
+    def count_reqs(path, seen, depth=0):
+        """requirements.txt 实际依赖数：-r/--requirement 引用递归展开（防环，深度限 3）。"""
+        if depth > 3 or path in seen:
+            return 0
+        seen.add(path)
+        try:
+            lines = open(os.path.join(root, path), encoding="utf-8", errors="ignore").read().splitlines()
+        except Exception:
+            return 0
+        n = 0
+        for l in lines:
+            l = l.strip()
+            if not l or l.startswith("#"):
+                continue
+            m = re.match(r"^-r\s+(.+)$|^--requirement\s+(.+)$", l)
+            if m:
+                ref = (m.group(1) or m.group(2)).strip().strip('"\'')
+                n += count_reqs(os.path.normpath(os.path.join(os.path.dirname(path), ref)).replace("\\", "/"), seen, depth + 1)
+            elif not l.startswith(("-e ", "--editable", "-f ", "--find-links", "-i ", "--index-url", "--extra-index-url", "--trusted-host", "-c ", "--constraint")):
+                n += 1
+        return n
+
     for f in ("requirements.txt", "pyproject.toml", "package.json", "go.mod", "Cargo.toml"):
         for rel in all_paths:
             if os.path.basename(rel) == f and rel.count("/") <= 2 and inside_repo(os.path.join(root, rel)):
@@ -239,9 +264,9 @@ def main():
                 except Exception:
                     continue
                 if f == "requirements.txt":
-                    n = len([l for l in text.splitlines() if l.strip() and not l.startswith("#")])
-                    pinned = len([l for l in text.splitlines() if "==" in l])
-                    print(f"- {rel}: {n} 个依赖，其中固定版本 {pinned} 个")
+                    n = count_reqs(rel, set())
+                    pinned = len([l for l in text.splitlines() if "==" in l and not l.strip().startswith(("-r", "#", "-e"))])
+                    print(f"- {rel}: 合计 {n} 个依赖（含 -r 引用展开），固定版本 {pinned} 个")
                 elif f == "package.json":
                     try:
                         j = json.loads(text)
@@ -251,8 +276,27 @@ def main():
                         print(f"- {rel}: dependencies {deps} / devDependencies {dev}；install 钩子: {warn or '无'}")
                     except Exception:
                         pass
+                elif f == "pyproject.toml":
+                    m = re.search(r"(?ms)^\s*dependencies\s*=\s*\[(.*?)\]", text)
+                    n = len(re.findall(r'["\']', m.group(1))) // 2 if m else 0
+                    seg = re.search(r"(?ms)^\[tool\.poetry\.dependencies\]\s*$(.*?)(?=^\[|\Z)", text)
+                    po = len(re.findall(r"(?m)^\s{2,}[\w.\-]+\s*=", seg.group(1))) - 1 if seg else 0  # 减 python 自身
+                    print(f"- {rel}: PEP621 dependencies {n} 个" + (f"，poetry dependencies {po} 个" if seg else ""))
+                elif f == "go.mod":
+                    blk = re.search(r"(?ms)^\s*require\s*\((.*?)\)", text)
+                    n = len([l for l in blk.group(1).splitlines() if l.strip() and not l.strip().startswith("//")]) if blk else 0
+                    n += len(re.findall(r"(?m)^\s*require\s+\S+\s+v[\w.\-+]+", text))
+                    print(f"- {rel}: require {n} 个模块")
+                elif f == "Cargo.toml":
+                    seg = re.search(r"(?ms)^\[dependencies\]\s*$(.*?)(?=^\[|\Z)", text)
+                    n = len(re.findall(r"(?m)^\s*[\w.\-]+\s*=", seg.group(1))) if seg else 0
+                    print(f"- {rel}: dependencies {n} 个")
                 else:
                     print(f"- {rel}: 存在")
+    if lockfiles:
+        print(f"- 锁文件: ✓ {', '.join(lockfiles)}（依赖可复现）")
+    else:
+        print("- 锁文件: ✗ 未发现（依赖不可复现，rubric D 的验证性扣分点）")
     if not dep_found:
         print("- 未发现依赖清单文件（requirements.txt / pyproject.toml / package.json / go.mod / Cargo.toml）")
     print()
@@ -264,7 +308,7 @@ def main():
         "CI": has(lambda p: p.startswith(".github/workflows/")),
         "Docker": has(lambda p: "dockerfile" in p),
         "测试": test_loc > 0,
-        "LICENSE": has(lambda p: os.path.basename(p).startswith("license")),
+        "LICENSE": has(lambda p: "/" not in p and re.search(r"^(licen[sc]e|copying|unlicense)", p)),
         "CONTRIBUTING": has(lambda p: "contributing" in os.path.basename(p)),
         "SECURITY.md": has(lambda p: os.path.basename(p) == "security.md"),
         "架构文档": has(lambda p: "architecture" in p),
@@ -274,15 +318,34 @@ def main():
         "lint/类型配置": has(lambda p: os.path.basename(p) in ("tsconfig.json", "mypy.ini", "ruff.toml", ".eslintrc.json", ".eslintrc.js", ".golangci.yml", "eslint.config.js")),
         "AI 协作配置": has(lambda p: re.search(r"(^|/)(agents?\.md|claude\.md|\.cursorrules|\.agents/|\.claude/)", p) is not None),
     }
-    mono = [k for k, v in {"pnpm-workspace": has(lambda p: p == "pnpm-workspace.yaml"), "lerna": has(lambda p: p == "lerna.json"),
-                           "turbo": has(lambda p: p == "turbo.json"), "nx": has(lambda p: p == "nx.json"),
-                           "go.work": has(lambda p: p == "go.work")}.items() if v]
+    mono = [k for k, v in {"pnpm-workspace": has(lambda p: re.search(r"(^|/)pnpm-workspace\.yaml$", p) is not None),
+                           "lerna": has(lambda p: re.search(r"(^|/)lerna\.json$", p) is not None),
+                           "turbo": has(lambda p: re.search(r"(^|/)turbo\.json$", p) is not None),
+                           "nx": has(lambda p: re.search(r"(^|/)nx\.json$", p) is not None),
+                           "go.work": has(lambda p: re.search(r"(^|/)go\.work$", p) is not None)}.items() if v]
     sig["monorepo"] = bool(mono)
     sig["子模块"] = has(lambda p: p == ".gitmodules")
     sig["DISCLAIMER"] = has(lambda p: "disclaimer" in os.path.basename(p))
     sig["Dependabot/Renovate"] = has(lambda p: "dependabot" in p or "renovate" in p)
     print("## 工程化信号")
     print("- " + " · ".join(f"{k}{'✓' if v else '✗'}" for k, v in sig.items()))
+    if not sig["LICENSE"]:
+        lic = None
+        for rel in all_paths:
+            if rel.lower() in ("pyproject.toml", "package.json") and inside_repo(os.path.join(root, rel)):
+                try:
+                    t = open(os.path.join(root, rel), encoding="utf-8", errors="ignore").read(20000)
+                except Exception:
+                    continue
+                m = (re.search(r'(?m)^\s*license\s*=\s*["\']?([^"\'{}\n]+)', t) if rel.lower() == "pyproject.toml"
+                     else re.search(r'"license"\s*:\s*"([^"]+)"', t))
+                if m:
+                    lic = m.group(1).strip()
+                    break
+        if lic:
+            print(f"- LICENSE: 根目录未检出许可证文件，但 {rel} 声明为 {lic}——以声明为准并人工核实全文")
+        else:
+            print("- LICENSE: 根目录未检出许可证文件，清单也无声明——需人工核实（勿直接判无）")
     wf = [p for p in all_paths if p.startswith(".github/workflows/")]
     print(f"- workflows: {wf}")
     print()

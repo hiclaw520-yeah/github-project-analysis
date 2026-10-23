@@ -140,7 +140,7 @@ INJECTION = [
     (re.compile(r"do not (tell|inform|mention|reveal).{0,30}(user|human)|don'?t (tell|let) the user", re.I), "要求对用户隐瞒"),
     (re.compile(r"\b(send|upload|exfiltrat\w*|forward|transmit)\b.{0,60}(api[_ -]?keys?|tokens?|credentials?|passwords?|secrets?|\.env\b|ssh keys?|private keys?)", re.I), "外传凭据措辞"),
     (re.compile(r"\b(curl|wget|requests\.post|fetch)\b.{0,80}(\$\{?\w*(KEY|TOKEN|SECRET|PASSWORD)\w*|\.env\b|~/\.ssh)", re.I), "带凭据的外联命令"),
-    (re.compile(r"(read|cat|print|include).{0,40}(~/\.ssh|\.aws/credentials|id_rsa|\.env\b)", re.I), "读取敏感文件"),
+    (re.compile(r"\b(read|cat|print|include)\b.{0,40}(~/\.ssh|\.aws/credentials|id_rsa|\.env\b)", re.I), "读取敏感文件"),
 ]
 PLACEHOLDER_LINK = re.compile(r"^(…|\.\.\.|url|link|path|<[^>]*>|\{[^}]*\}|relative/path\.md|path/to/.*|your[-_].*|example.*|todo|tbd|xxx+)$", re.I)
 WIDE_TOOLS = re.compile(r"Bash\(\*\)|Bash\(\s*\)|^\s*\*\s*$|allowed-tools:\s*\"?\*", re.I)
@@ -163,7 +163,8 @@ def main():
         t = read(root, s)
         fm, body = frontmatter(t)
         d = os.path.dirname(s)
-        dirname = os.path.basename(d) if d else os.path.basename(root)
+        # 根目录 SKILL.md 不比对目录名：克隆目录名是使用者任取的，name 对不上不算问题
+        dirname = os.path.basename(d) if d else None
         info = {"path": s, "lines": body.count("\n") + 1, "fm": fm}
         if fm is None:
             problems["缺少 frontmatter"] += 1
@@ -171,7 +172,7 @@ def main():
             name, desc = fm.get("name", ""), fm.get("description", "")
             if not name:
                 problems["缺少 name"] += 1
-            elif name != dirname:
+            elif dirname and name != dirname:
                 problems["name 与目录名不一致"] += 1
             if name and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", name):
                 problems["name 不符合 小写字母/数字/连字符 规范"] += 1

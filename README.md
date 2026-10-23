@@ -64,7 +64,7 @@ github-project-review/
 ├── .gitattributes                    # 行尾规范：cmd=CRLF / sh=LF（跨平台）
 ├── .github/workflows/ci.yml          # CI：ubuntu/windows × Python 3.8/3.12 跑测试
 ├── tests/test_probes.py              # 自动化测试（夹具驱动的集成测试 + 纯函数单测）
-├── tools/make_fixtures.py            # 离线夹具生成器（攻击/边界样本仓库 ×7 类）
+├── tools/make_fixtures.py            # 离线夹具生成器（攻击/边界样本仓库 ×8 类）
 ├── tools/run_regression.py           # 回归比对器：改动前 baseline、改动后 compare
 ├── references/
 │   ├── architecture-core.md          # 主链路追踪方法
@@ -98,8 +98,10 @@ github-project-review/
     ├── classify_repo.py              # 类型识别与画像建议
     ├── arch_probe.py                 # 运行时代码架构分析
     ├── content_probe.py              # 内容/文档型仓库分析
-    └── package.py                    # 一键打包分发 zip（跨平台，逻辑唯一入口）
+    └── package.py                    # 一键打包分发 zip（仅维护者环境，分发包不含）
 ```
+
+> 上面 `package.cmd` / `package.sh` / `.github/` / `tests/` / `tools/` 与 `.gitignore`、`.gitattributes` 只存在于开发环境，`export-ignore` 已把它们排除在分发包之外；分发包里 `scripts/` 只有 6 个探针脚本。
 
 ## 设计原则
 
@@ -112,7 +114,7 @@ github-project-review/
 
 ## 使用前提
 
-- Python 3.8+，Windows / Linux / macOS（已在 Windows 上实测：路径分隔符、管道输出编码（GBK / cp1252 模拟）、中文文件名仓库、带 BOM 的 SKILL.md 均正常。1.1.2 修复 Windows 路径分隔符导致的脚本失效与误报；1.1.3 修复非 UTF-8 编码下的输出崩溃与提交历史静默丢失、中文路径转义漏检；1.1.4 修复带 BOM 的 SKILL.md 被误判为缺少 frontmatter、中文 description 被"过短"阈值误判、性能截断静默无提示）
+- Python 3.8+，Windows / Linux / macOS（已在 Windows 上实测：路径分隔符、管道输出编码（GBK / cp1252 模拟）、中文文件名仓库、带 BOM 的 SKILL.md 均正常。1.1.2 修复 Windows 路径分隔符导致的脚本失效与误报；1.1.3 修复非 UTF-8 编码下的输出崩溃与提交历史静默丢失、中文路径转义漏检；1.1.4 修复带 BOM 的 SKILL.md 被误判为缺少 frontmatter、中文 description 被"过短"阈值误判、性能截断静默无提示；1.1.5 修复单技能仓库被误判为内容合集、注入正则的常见词误报、LICENSE 检测两处偏差，并增强依赖统计（-r 展开、锁文件检测、monorepo 任意层级））
 - git（只读克隆）
 - 网络访问 GitHub
 
@@ -138,8 +140,12 @@ github-project-review/
 
 ## 版本
 
-当前版本 1.1.4（2026-10-21）。版本号写在 `SKILL.md` 的 `metadata` 中。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 1.1.5（2026-10-23）。版本号写在 `SKILL.md` 的 `metadata` 中。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可
 
 [MIT License](LICENSE) © 2026 hiclaw520 <hiclaw520@yeah.net>
+
+```
+
+```

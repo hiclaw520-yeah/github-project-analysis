@@ -161,12 +161,17 @@ def main():
 
     # ---- agent-skill-plugin ----
     skill_md = count(lambda p: p.endswith("/skill.md") or p == "skill.md")
+    # 根目录或 skills/<name>/ 布局的 SKILL.md 是技能包的强信号（克隆目录名任意，不影响）
+    skill_md_root = count(lambda p: p == "skill.md" or re.match(r"^skills/[^/]+/skill\.md$", p))
     manifests = [f for f in files if re.search(r"(^|/)(\.claude-plugin|\.cursor-plugin|\.copilot-plugin|\.codex-plugin)/", f.lower())
                  or re.search(r"(^|/)(plugin|marketplace)\.json$", f.lower())]
     cmd_md = count(lambda p: re.search(r"(^|/)commands/[^/]+\.md$", p) is not None)
     agent_md = count(lambda p: re.search(r"(^|/)agents/[^/]+\.md$", p) is not None)
     mcp = dep("@modelcontextprotocol/sdk", "fastmcp", "mcp") or has(lambda p: os.path.basename(p) == "server.json") or "model context protocol" in readme[:3000]
-    if skill_md:
+    if skill_md_root:
+        add("agent-skill-plugin", 4 if skill_md_root == 1 else 6,
+            f"{skill_md_root} 个根/skills 布局 SKILL.md（技能包强信号）")
+    elif skill_md:
         add("agent-skill-plugin", min(6, 2 + skill_md // 5), f"{skill_md} 个 SKILL.md")
     if manifests:
         add("agent-skill-plugin", 3, f"插件/市场清单 {len(manifests)} 个（如 {manifests[0]}）")
@@ -176,10 +181,11 @@ def main():
         add("agent-skill-plugin", 3, "MCP 服务/SDK 线索")
 
     # ---- content-collection ----
-    if n and doc_n / n > 0.65 and code_n < 15:
+    # 有 SKILL.md 的仓库不因"文档占比高/精选词"判成内容合集——技能包本身就是 md 为主的仓库
+    if n and doc_n / n > 0.65 and code_n < 15 and not skill_md:
         add("content-collection", 4, f"文档占比 {doc_n * 100 // n}%、代码文件仅 {code_n}")
-    if re.search(r"awesome|curated list|精选|合集", readme[:1500]) and doc_n >= code_n:
-        add("content-collection", 2, "README 呈现 awesome/合集特征")
+    if re.search(r"awesome|curated list", readme[:1500]) and doc_n >= code_n and not skill_md:
+        add("content-collection", 2, "README 呈现 awesome/curated list 特征")
     if has(lambda p: re.search(r"(^|/)(chapters?|lessons?|book|course|tutorial)s?/", p) is not None):
         add("content-collection", 2, "含 chapters/lessons/book/tutorial 目录")
     if skill_md >= 10 and code_n < 15:  # 技能包常常也是内容型

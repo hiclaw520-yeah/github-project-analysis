@@ -2,7 +2,7 @@
 """离线测试夹具生成器：一次性生成探针脚本的全部攻击/边界样本仓库。
 
 用法：python tools/make_fixtures.py <目标目录>
-生成 9 类样本（每类一个子目录），供 tests/test_probes.py 断言：
+生成 14 类样本（每类一个子目录），供 tests/test_probes.py 断言：
   1. symlink_attack      SKILL.md 软链到仓库外的秘密文件（Windows 无特权时自动跳过并留标记）
   2. malicious_gitconfig .git/config 带恶意 fsmonitor（若被执行会留下 PWNED 标记文件）
   3. chinese_paths       中文目录/文件名 + 1 条失效相对链接
@@ -16,6 +16,7 @@
  11. multi_root_skills   根下 3 个 <name>/SKILL.md 技能目录（1.1.9 补缺口）
  12. root_skill_with_refs 根下 1 个技能目录 + references + 脚本（1.1.9 补缺口）
  13. tiny_root_skill     README + <name>/SKILL.md + 脚本的 3 文件极小仓库（1.1.8 回归锁）
+ 14. skill_doc_template  教程仓库在 docs/ 放 SKILL.md 模板：噪声目录不算技能强信号（1.1.10 场景）
 """
 import os
 import subprocess
@@ -217,6 +218,20 @@ def build_all(out):
           skill("alpha", "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
     write(os.path.join(ts, "run.py"), "print('hi')\n")
     commit(ts)
+
+    # 14. 教程仓库在 docs/ 放 SKILL.md 模板：docs/examples 等噪声目录里的 SKILL.md
+    #     不得判技能强信号，也不得压制内容分类（1.1.10）
+    nt = os.path.join(out, "skill_doc_template")
+    made["skill_doc_template"] = nt
+    write(os.path.join(nt, "README.md"), "# 技能编写教程\n\n教你写 SKILL.md 的教程合集。\n")
+    write(os.path.join(nt, "docs", "SKILL.md"),
+          skill("skill-template", "讲解 SKILL.md 格式的模板文件（文档示例，非仓库本体）"))
+    write(os.path.join(nt, "docs", "format.md"), "# 格式说明\n\nfrontmatter 字段讲解。\n")
+    for i in (1, 2, 3):
+        write(os.path.join(nt, "chapters", "ch%d.md" % i), "# 第 %d 章\n\n教程正文内容。\n" % i)
+    write(os.path.join(nt, "pyproject.toml"),
+          '[project]\nname = "skill-doc-tutorial"\nversion = "0.1.0"\nlicense = "MIT"\n')
+    commit(nt)
 
     return made
 

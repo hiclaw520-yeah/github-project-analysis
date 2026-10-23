@@ -191,6 +191,13 @@ class ProbeTests(unittest.TestCase):
         self.assertTrue(re.search(r"主类型\*\*:\s*`agent-skill-plugin`", out),
                         "极小技能仓库被误判内容合集:\n%s" % out[:500])
 
+    def test_noise_dir_skill_not_strong(self):
+        """docs/examples 等噪声目录里的 SKILL.md 模板不判技能强信号，教程仓库仍判内容合集（1.1.10）。"""
+        _, out = run_probe("classify_repo", self.fx["skill_doc_template"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`content-collection`", out),
+                        "噪声目录的 SKILL.md 模板被当成技能包本体:\n%s" % out[:500])
+        self.assertNotIn("根/skills 布局", out)
+
 
 if __name__ == "__main__":
     unittest.main()

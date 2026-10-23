@@ -2,6 +2,16 @@
 
 本项目版本号写在 `SKILL.md` 的 `metadata` 块中，遵循语义化版本。
 
+## [1.1.10] — 2026-10-23
+
+### Fixed
+
+- **噪声/构建目录里的 SKILL.md 不再判技能强信号**：`docs/SKILL.md`、`examples/SKILL.md`（教程仓库常放的格式讲解与模板）、`dist/SKILL.md`、`node_modules/**/SKILL.md` 等不再命中"根/skills 布局"强信号，也不再压制"文档占比"内容信号——此类教程仓库正确判 content-collection；极小仓库（n ≤ 5）的技能保底分同样不再被噪声目录命中；`.claude/` 点目录、根/skills/<name>/ 布局行为不变（`classify_repo.py`）
+
+### Tests
+
+- 夹具增至 14 类（新增 skill_doc_template：docs/ 下放 SKILL.md 模板的教程仓库）；测试 23 → 24 个
+
 ## [1.1.9] — 2026-10-23
 
 ### Fixed

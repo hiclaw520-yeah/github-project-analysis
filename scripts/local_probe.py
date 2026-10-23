@@ -355,26 +355,26 @@ def main():
                     fm = re.search(r'(?m)^\s*license\s*=\s*\{\s*file\s*=\s*"([^"\n]+)"', t)
                     tm = re.search(r'(?m)^\s*license\s*=\s*\{\s*text\s*=\s*"([^"\n]+)"', t)
                     if m:
-                        lic = m.group(1).strip()
+                        lic = f"声明为 {m.group(1).strip()}"
                     elif fm:
-                        # file 形式的值是文件名不是许可证名，措辞要区分（1.1.8）
-                        lic = f"引用的许可证文件 {fm.group(1).strip()}"
+                        # file 形式的值是文件名不是许可证名，措辞要区分（1.1.8/1.1.9）
+                        lic = f"引用了许可证文件 {fm.group(1).strip()}"
                     elif tm:
-                        lic = tm.group(1).strip()
+                        lic = f"声明为 {tm.group(1).strip()}"
                     elif re.search(r'(?m)^\s*license\s*=\s*\{', t):
-                        lic = "license 字段（表格写法，值需人工读取）"
+                        lic = "声明了 license 字段（表格写法，值需人工读取）"
                     else:
                         cm = re.search(r'(?i)license\s*::\s*osi approved\s*::\s*([^"\n]+?)"', t)
                         if cm:
-                            lic = cm.group(1).strip() + "（classifiers 声明）"
+                            lic = f"声明为 {cm.group(1).strip()}（classifiers）"
                 else:
                     m = re.search(r'"license"\s*:\s*"([^"]+)"', t)
                     if m:
-                        lic = m.group(1).strip()
+                        lic = f"声明为 {m.group(1).strip()}"
                 if lic:
                     break
         if lic:
-            print(f"- LICENSE: 根目录未检出许可证文件，但 {rel} 声明为 {lic}——以声明为准并人工核实全文")
+            print(f"- LICENSE: 根目录未检出许可证文件，但 {rel} {lic}——以声明为准并人工核实全文")
         else:
             print("- LICENSE: 根目录未检出许可证文件，清单也无声明——需人工核实（勿直接判无）")
     wf = [p for p in all_paths if p.startswith(".github/workflows/")]

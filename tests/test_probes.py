@@ -168,10 +168,28 @@ class ProbeTests(unittest.TestCase):
                         "开发辅助技能被保底分抬成主类型:\n%s" % out[:500])
 
     def test_pyproject_file_license(self):
-        """pyproject 的 {file = "LICENSE"} 输出为"引用的许可证文件"，不把文件名当许可证名（1.1.8）。"""
+        """pyproject 的 {file = "LICENSE"} 输出为"引用了许可证文件"，不把文件名当许可证名（1.1.8/1.1.9）。"""
         _, out = run_probe("local_probe", self.fx["team_handbook"])
-        self.assertIn("引用的许可证文件 LICENSE", out)
+        self.assertIn("引用了许可证文件 LICENSE", out)
         self.assertNotIn("声明为 LICENSE", out)
+
+    def test_multi_root_skill_dirs(self):
+        """仓库根下多个 <name>/SKILL.md 技能目录判技能包，不被文档占比压制成内容合集（1.1.9）。"""
+        _, out = run_probe("classify_repo", self.fx["multi_root_skills"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`agent-skill-plugin`", out),
+                        "根下多个技能目录未识别:\n%s" % out[:500])
+
+    def test_single_root_skill_dir(self):
+        """根下单个 <name>/SKILL.md + references + 脚本判技能包（1.1.9 补缺口）。"""
+        _, out = run_probe("classify_repo", self.fx["root_skill_with_refs"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`agent-skill-plugin`", out),
+                        "根下单技能目录未识别:\n%s" % out[:500])
+
+    def test_tiny_root_skill_dir(self):
+        """README + <name>/SKILL.md + 脚本的 3 文件极小仓库判技能包（1.1.8 回归锁）。"""
+        _, out = run_probe("classify_repo", self.fx["tiny_root_skill"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`agent-skill-plugin`", out),
+                        "极小技能仓库被误判内容合集:\n%s" % out[:500])
 
 
 if __name__ == "__main__":

@@ -13,6 +13,9 @@
   8. single_skill        根 SKILL.md 单技能仓库（1.1.5 修复的分类/name 误判场景）
   9. dev_skill_docs      仅带 .claude/skills/ 开发辅助技能的教程仓库（1.1.6 回归修复场景）
  10. team_handbook       极小团队手册 + 开发辅助技能：文档多于 SKILL.md，保底不生效（1.1.8 场景）
+ 11. multi_root_skills   根下 3 个 <name>/SKILL.md 技能目录（1.1.9 补缺口）
+ 12. root_skill_with_refs 根下 1 个技能目录 + references + 脚本（1.1.9 补缺口）
+ 13. tiny_root_skill     README + <name>/SKILL.md + 脚本的 3 文件极小仓库（1.1.8 回归锁）
 """
 import os
 import subprocess
@@ -177,6 +180,43 @@ def build_all(out):
     write(os.path.join(tb, "pyproject.toml"),
           '[project]\nname = "team-handbook"\nversion = "0.1.0"\nlicense = {file = "LICENSE"}\n')
     commit(tb)
+
+    # 11-13. 技能目录直接放仓库根下的三种布局（1.1.9 补缺口/锁回归）：
+    #        根下首层非点目录的 <name>/SKILL.md 算技能强信号，压制"文档占比"内容信号
+    mr = os.path.join(out, "multi_root_skills")
+    made["multi_root_skills"] = mr
+    for name in ("alpha", "beta", "gamma"):
+        write(os.path.join(mr, name, "SKILL.md"),
+              skill(name, "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
+        write(os.path.join(mr, name, "guide.md"), "# %s 指南\n\n正文内容。\n" % name)
+    for g in ("r1", "r2", "r3", "r4"):
+        write(os.path.join(mr, "references", "%s.md" % g), "# 参考材料\n\n正文内容。\n")
+    for g in ("m1", "m2", "m3", "m4"):
+        write(os.path.join(mr, "%s.md" % g), "# 散文标题 %s\n\n正文内容。\n" % g)
+    write(os.path.join(mr, "README.md"), "# 技能合集\n\n多个技能的集合仓库。\n")
+    write(os.path.join(mr, "scripts", "a.py"), "print('a')\n")
+    write(os.path.join(mr, "scripts", "b.py"), "print('b')\n")
+    commit(mr)
+
+    rs = os.path.join(out, "root_skill_with_refs")
+    made["root_skill_with_refs"] = rs
+    write(os.path.join(rs, "alpha", "SKILL.md"),
+          skill("alpha", "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
+    for g in ("r1", "r2", "r3", "r4"):
+        write(os.path.join(rs, "references", "%s.md" % g), "# 参考材料\n\n正文内容。\n")
+    write(os.path.join(rs, "README.md"), "# 单技能仓库\n\n附参考材料与脚本。\n")
+    write(os.path.join(rs, "extra.md"), "# 补充说明\n\n正文内容。\n")
+    write(os.path.join(rs, "scripts", "a.py"), "print('a')\n")
+    write(os.path.join(rs, "scripts", "b.py"), "print('b')\n")
+    commit(rs)
+
+    ts = os.path.join(out, "tiny_root_skill")
+    made["tiny_root_skill"] = ts
+    write(os.path.join(ts, "README.md"), "# 极小技能仓库\n\n一个技能目录加一个脚本。\n")
+    write(os.path.join(ts, "alpha", "SKILL.md"),
+          skill("alpha", "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
+    write(os.path.join(ts, "run.py"), "print('hi')\n")
+    commit(ts)
 
     return made
 

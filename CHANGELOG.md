@@ -2,6 +2,19 @@
 
 本项目版本号写在 `SKILL.md` 的 `metadata` 块中，遵循语义化版本。
 
+## [1.1.9] — 2026-10-23
+
+### Fixed
+
+- **识别"技能目录直接放仓库根下"的布局**：根下首层非点目录的 `<name>/SKILL.md`（如 `alpha/SKILL.md`）现在算技能强信号（与根目录、`skills/<name>/` 并列），并压制"文档占比/精选词"内容信号——此前此类仓库被判 content-collection（`classify_repo.py`）
+- 极小仓库保底条件从"SKILL.md 是唯一文档"改为"存在非点目录下的 SKILL.md"：3 文件的 `README + <name>/SKILL.md + 脚本` 仓库恢复判技能包（1.1.8 引入的回归）；`.claude/` 等点目录的开发辅助技能仍不保底，团队手册用例行为不变（`classify_repo.py`）
+- `pyproject.toml` 的 `{file = "..."}` 输出句式改为"引用了许可证文件 LICENSE"（消除"声明为 引用的许可证文件"的不通顺）；"声明为/引用了"前缀移入各分支（`local_probe.py`）
+- `architecture-core.md` 两处具名数字轶事（5471 行配置类、`.env.example` 改 70 次）改为通用表述
+
+### Tests
+
+- 夹具增至 13 类：新增根下 3 技能目录、单技能目录 + references、3 文件极小技能仓库三种布局；测试 20 → 23 个
+
 ## [1.1.8] — 2026-10-23
 
 ### Fixed

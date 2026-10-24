@@ -50,7 +50,7 @@ def get(path, params=None):
         url += "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={
         "Accept": "application/vnd.github+json",
-        "User-Agent": "github-project-review",
+        "User-Agent": "github-project-analysis",
         **({"Authorization": f"Bearer {TOKEN}"} if TOKEN else {}),
     })
     try:

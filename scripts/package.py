@@ -19,7 +19,7 @@ for _s in (sys.stdout, sys.stderr):
         pass
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # scripts/ 的上一级
-PREFIX = "github-project-review"
+PREFIX = "github-project-analysis"
 
 
 def sh(*cmd):

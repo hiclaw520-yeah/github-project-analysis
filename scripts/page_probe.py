@@ -29,7 +29,7 @@ for _s in (sys.stdout, sys.stderr):
 
 from datetime import datetime, timezone
 
-UA = "Mozilla/5.0 (compatible; github-project-review)"
+UA = "Mozilla/5.0 (compatible; github-project-analysis)"
 
 
 def parse_repo(arg):

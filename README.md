@@ -1,4 +1,4 @@
-# GitHub 项目体检（Universal GitHub Project Review）
+# GitHub 项目分析（GitHub Project Analysis）
 
 > 给任意 GitHub 仓库做一次有证据支撑的全面体检——分类、画像、评分、同类对比，20–40 分钟出报告。
 
@@ -54,7 +54,7 @@
 ## 项目结构
 
 ```
-github-project-review/
+github-project-analysis/
 ├── SKILL.md                          # 技能入口：触发条件、工作流骨架、安全守则、各步指向
 ├── README.md                         # 你正在看的这个
 ├── LICENSE                           # MIT

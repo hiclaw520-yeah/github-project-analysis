@@ -183,13 +183,17 @@ def main():
             root_loose_n += 1
     sat_n = top_n.get("references", 0) + top_n.get("scripts", 0)
 
-    def skill_side_share(top):
-        """<top>/ 下 SKILL.md 的"本体侧"文件数占全仓库文件数的比例。"""
+    # 含 SKILL.md 的候选首层目录（非点、非噪声）：多技能仓库（根下 alpha/、beta/、gamma/ 各一个技能）
+    # 里每个技能目录都只占全仓库一小部分，合起来才是本体，所以占比按候选目录的并集算（1.1.12），
+    # 不按单个目录算（1.1.11 的回归：根下 3–10 个技能目录被判成内容合集）
+    skill_tops = {p.split("/")[0] for p in low if p.endswith("/skill.md") and "/" in p and not skill_is_noise(p)}
+
+    def skill_side_share():
+        """所有候选技能目录 + 根下 references/、scripts/ 卫星目录 + 根级散文件，占全仓库文件数的比例。"""
         if not n:
             return 0.0
-        own = top_n.get(top, 0)
-        # 所在目录本身就是卫星目录时，不与 sat_n 重复累加
-        sat = sat_n - own if top in ("references", "scripts") else sat_n
+        own = sum(top_n.get(t, 0) for t in skill_tops)
+        sat = sum(top_n.get(s, 0) for s in ("references", "scripts") if s not in skill_tops)
         return (own + sat + root_loose_n) / n
 
     # ---- agent-skill-plugin ----
@@ -197,17 +201,17 @@ def main():
     # 根目录、skills/<name>/ 或根下首层 <name>/（非点、非噪声目录）的 SKILL.md 都是技能包强信号——
     # 技能包常以"仓库根/<技能名>/SKILL.md"布局分发（克隆目录名任意，不影响）；
     # .claude/ 等点目录（开发辅助技能）与 docs/examples 等噪声目录（教程模板）不算（1.1.9/1.1.10）；
-    # 首层 <name>/ 还需"本体侧"占全仓库文件数 50% 以上，黑名单外的 template/、assets/、
+    # 首层 <name>/ 还需所有候选技能目录合计的"本体侧"占全仓库文件数 50% 以上，黑名单外的 template/、assets/、
     # spec/ 等目录里占极小比例的格式模板不算（1.1.11）
     skill_md_root = count(lambda p: p == "skill.md"
                           or re.match(r"^skills/[^/]+/skill\.md$", p)
                           or (re.match(r"^[^/]+/skill\.md$", p) and not skill_is_noise(p)
-                              and skill_side_share(p.split("/")[0]) >= 0.5))
+                              and skill_side_share() >= 0.5))
     # 本体目录（非点、非噪声）下的 SKILL.md，含更深层如中文路径"技能/<名>/SKILL.md"——极小仓库保底用；
     # 同样的占比兜底也适用（1.1.11）
     skill_md_visible = count(lambda p: p == "skill.md"
                              or (p.endswith("/skill.md") and not skill_is_noise(p)
-                                 and skill_side_share(p.split("/")[0]) >= 0.5))
+                                 and skill_side_share() >= 0.5))
     manifests = [f for f in files if re.search(r"(^|/)(\.claude-plugin|\.cursor-plugin|\.copilot-plugin|\.codex-plugin)/", f.lower())
                  or re.search(r"(^|/)(plugin|marketplace)\.json$", f.lower())]
     cmd_md = count(lambda p: re.search(r"(^|/)commands/[^/]+\.md$", p) is not None)

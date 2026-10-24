@@ -114,7 +114,7 @@ github-project-analysis/
 
 ## 使用前提
 
-- Python 3.8+，Windows / Linux / macOS（已在 Windows 上实测：路径分隔符、管道输出编码（GBK / cp1252 模拟）、中文文件名仓库、带 BOM 的 SKILL.md 均正常。1.1.2 修复 Windows 路径分隔符导致的脚本失效与误报；1.1.3 修复非 UTF-8 编码下的输出崩溃与提交历史静默丢失、中文路径转义漏检；1.1.4 修复带 BOM 的 SKILL.md 被误判为缺少 frontmatter、中文 description 被"过短"阈值误判、性能截断静默无提示；1.1.5 修复单技能仓库被误判为内容合集、注入正则的常见词误报、LICENSE 检测两处偏差，并增强依赖统计（-r 展开、锁文件检测、monorepo 任意层级）；1.1.6 修复开发辅助技能（.claude/skills/ 等）误压制内容分类、-r 展开绕过读文件防护两个 1.1.5 回归，并修正 3.8 分结论边界；1.1.7 补混合语言仓库的函数测量标注（仅 Python）与示例报告的采集日期/引用免责；1.1.8 收紧极小仓库的技能保底条件（SKILL.md 须为唯一文档）、修正 file 形式 license 措辞，通用文档中的具名轶事改为通用表述；1.1.9 识别"技能目录直接放仓库根下"（<name>/SKILL.md）布局并恢复 3 文件极小技能仓库的判定，license 输出句式微调；1.1.10 噪声目录（docs/examples/dist/node_modules 等）里的 SKILL.md 不再判技能强信号或压制内容分类；1.1.11 黑名单外目录（template/、assets/、spec/ 等 8 类）里的 SKILL.md 格式模板靠"本体侧占比 ≥ 50%"兜底，不再把教程仓库误判成技能包）
+- Python 3.8+，Windows / Linux / macOS（已在 Windows 上实测：路径分隔符、管道输出编码（GBK / cp1252 模拟）、中文文件名仓库、带 BOM 的 SKILL.md 均正常。1.1.2 修复 Windows 路径分隔符导致的脚本失效与误报；1.1.3 修复非 UTF-8 编码下的输出崩溃与提交历史静默丢失、中文路径转义漏检；1.1.4 修复带 BOM 的 SKILL.md 被误判为缺少 frontmatter、中文 description 被"过短"阈值误判、性能截断静默无提示；1.1.5 修复单技能仓库被误判为内容合集、注入正则的常见词误报、LICENSE 检测两处偏差，并增强依赖统计（-r 展开、锁文件检测、monorepo 任意层级）；1.1.6 修复开发辅助技能（.claude/skills/ 等）误压制内容分类、-r 展开绕过读文件防护两个 1.1.5 回归，并修正 3.8 分结论边界；1.1.7 补混合语言仓库的函数测量标注（仅 Python）与示例报告的采集日期/引用免责；1.1.8 收紧极小仓库的技能保底条件（SKILL.md 须为唯一文档）、修正 file 形式 license 措辞，通用文档中的具名轶事改为通用表述；1.1.9 识别"技能目录直接放仓库根下"（<name>/SKILL.md）布局并恢复 3 文件极小技能仓库的判定，license 输出句式微调；1.1.10 噪声目录（docs/examples/dist/node_modules 等）里的 SKILL.md 不再判技能强信号或压制内容分类；1.1.11 黑名单外目录（template/、assets/、spec/ 等 8 类）里的 SKILL.md 格式模板靠"本体侧占比 ≥ 50%"兜底，不再把教程仓库误判成技能包；1.1.12 修复该占比兜底对根下多个技能目录（3–10 个）的误伤，占比改按全部候选技能目录合计计算）
 - git（只读克隆）
 - 网络访问 GitHub
 
@@ -140,7 +140,7 @@ github-project-analysis/
 
 ## 版本
 
-当前版本 1.1.11（2026-10-24）。版本号写在 `SKILL.md` 的 `metadata` 中。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本 1.1.12（2026-10-24）。版本号写在 `SKILL.md` 的 `metadata` 中。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可
 

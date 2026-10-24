@@ -198,6 +198,15 @@ class ProbeTests(unittest.TestCase):
                         "噪声目录的 SKILL.md 模板被当成技能包本体:\n%s" % out[:500])
         self.assertNotIn("根/skills 布局", out)
 
+    def test_tutorial_dirs_template_not_skill(self):
+        """黑名单外目录（template/assets/spec 等 8 个）的 SKILL.md 模板靠本体侧占比兜底不判技能包（1.1.11）。"""
+        for d in ("template", "templates", "assets", "spec", "resources", "reference", "snippets", "tutorial"):
+            with self.subTest(d=d):
+                _, out = run_probe("classify_repo", self.fx["tutorial_tpl_" + d])
+                self.assertTrue(re.search(r"主类型\*\*:\s*`content-collection`", out),
+                                "%s/ 的 SKILL.md 模板被当成技能包本体:\n%s" % (d, out[:500]))
+                self.assertNotIn("根/skills 布局", out)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,7 +2,7 @@
 """离线测试夹具生成器：一次性生成探针脚本的全部攻击/边界样本仓库。
 
 用法：python tools/make_fixtures.py <目标目录>
-生成 14 类样本（每类一个子目录），供 tests/test_probes.py 断言：
+生成 22 类样本（每类一个子目录），供 tests/test_probes.py 断言：
   1. symlink_attack      SKILL.md 软链到仓库外的秘密文件（Windows 无特权时自动跳过并留标记）
   2. malicious_gitconfig .git/config 带恶意 fsmonitor（若被执行会留下 PWNED 标记文件）
   3. chinese_paths       中文目录/文件名 + 1 条失效相对链接
@@ -17,6 +17,9 @@
  12. root_skill_with_refs 根下 1 个技能目录 + references + 脚本（1.1.9 补缺口）
  13. tiny_root_skill     README + <name>/SKILL.md + 脚本的 3 文件极小仓库（1.1.8 回归锁）
  14. skill_doc_template  教程仓库在 docs/ 放 SKILL.md 模板：噪声目录不算技能强信号（1.1.10 场景）
+ 15-22. tutorial_tpl_<d> 教程仓库在黑名单外目录放 SKILL.md 模板（1.1.11 场景）：
+       <d> ∈ template/templates/assets/spec/resources/reference/snippets/tutorial，
+       30 页正文 + 1 个模板只占约 3%，"本体侧占比 ≥ 50%"兜底后仍判内容合集
 """
 import os
 import subprocess
@@ -232,6 +235,20 @@ def build_all(out):
     write(os.path.join(nt, "pyproject.toml"),
           '[project]\nname = "skill-doc-tutorial"\nversion = "0.1.0"\nlicense = "MIT"\n')
     commit(nt)
+
+    # 15-22. 教程仓库在黑名单外目录放 SKILL.md 格式模板（1.1.11 场景）：
+    #        template/、templates/、assets/、spec/、resources/、reference/、snippets/、tutorial/
+    #        不在噪声目录黑名单里，靠"本体侧占比 >= 50%"兜底排除：技能强信号不命中，
+    #        教程仓库正确判 content-collection
+    for d in ("template", "templates", "assets", "spec", "resources", "reference", "snippets", "tutorial"):
+        tw = os.path.join(out, "tutorial_tpl_" + d)
+        made["tutorial_tpl_" + d] = tw
+        for i in range(1, 31):
+            write(os.path.join(tw, "guide", "p%d.md" % i), "# Page %d\ntext\n" % i)
+        write(os.path.join(tw, d, "SKILL.md"),
+              skill("example", 'Template showing the SKILL.md format; triggers on "example".', "body\n"))
+        write(os.path.join(tw, "README.md"), "# Rust tutorial book\nLessons for beginners.\n")
+        commit(tw)
 
     return made
 

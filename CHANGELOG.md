@@ -2,6 +2,16 @@
 
 本项目版本号写在 `SKILL.md` 的 `metadata` 块中，遵循语义化版本。
 
+## [1.1.11] — 2026-10-24
+
+### Fixed
+
+- **黑名单外的模板目录不再把教程仓库抬成技能包**：噪声目录黑名单挡不住 `template/`、`templates/`、`assets/`、`spec/`、`resources/`、`reference/`、`snippets/`、`tutorial/` 这些目录名（`template/` 是 Anthropic 官方 skills 仓库用过的名字），首层 `<name>/SKILL.md` 强信号新增"本体侧占比 ≥ 50%"兜底：SKILL.md 所在首层目录 + 根下 `references/`、`scripts/` 卫星目录 + 根级散文件合计须占全仓库文件数一半以上才算技能强信号——单技能目录（含卫星与散文件）占比接近 100% 仍判技能包，30 页教程里只占约 3% 的格式模板不再命中强信号、不再压制"文档占比"内容信号，正确判 content-collection；根目录 `SKILL.md` 与 `skills/<name>/` 布局不受影响；极小仓库（n ≤ 5）的技能保底分同样适用占比兜底（`classify_repo.py`）
+
+### Tests
+
+- 夹具增至 22 类（新增 8 个教程仓库夹具：guide/ 30 页正文 + 黑名单外目录各放一个 SKILL.md 模板）；测试 24 → 25 个
+
 ## [1.1.10] — 2026-10-23
 
 ### Fixed

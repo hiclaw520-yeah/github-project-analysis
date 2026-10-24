@@ -169,17 +169,45 @@ def main():
         score[t] += pts
         ev.setdefault(t, []).append(why)
 
+    # 首层目录与根级散文件的分布（1.1.11）：噪声黑名单挡不住 template/、assets/、spec/ 等
+    # 教程模板目录名，再加"本体侧占比"兜底——SKILL.md 所在首层目录 + 根下 references/、
+    # scripts/ 卫星目录 + 根级散文件（README、入口脚本等）合计占全仓库文件数 50% 以上，
+    # 该 SKILL.md 才算技能包本体：单技能目录占比接近 100% 仍判技能包，30 页教程里
+    # 只占约 3% 的格式模板不再被抬成技能包。
+    top_n = Counter()
+    root_loose_n = 0
+    for p in low:
+        if "/" in p:
+            top_n[p.split("/")[0]] += 1
+        else:
+            root_loose_n += 1
+    sat_n = top_n.get("references", 0) + top_n.get("scripts", 0)
+
+    def skill_side_share(top):
+        """<top>/ 下 SKILL.md 的"本体侧"文件数占全仓库文件数的比例。"""
+        if not n:
+            return 0.0
+        own = top_n.get(top, 0)
+        # 所在目录本身就是卫星目录时，不与 sat_n 重复累加
+        sat = sat_n - own if top in ("references", "scripts") else sat_n
+        return (own + sat + root_loose_n) / n
+
     # ---- agent-skill-plugin ----
     skill_md = count(lambda p: p.endswith("/skill.md") or p == "skill.md")
     # 根目录、skills/<name>/ 或根下首层 <name>/（非点、非噪声目录）的 SKILL.md 都是技能包强信号——
     # 技能包常以"仓库根/<技能名>/SKILL.md"布局分发（克隆目录名任意，不影响）；
-    # .claude/ 等点目录（开发辅助技能）与 docs/examples 等噪声目录（教程模板）不算（1.1.9/1.1.10）
+    # .claude/ 等点目录（开发辅助技能）与 docs/examples 等噪声目录（教程模板）不算（1.1.9/1.1.10）；
+    # 首层 <name>/ 还需"本体侧"占全仓库文件数 50% 以上，黑名单外的 template/、assets/、
+    # spec/ 等目录里占极小比例的格式模板不算（1.1.11）
     skill_md_root = count(lambda p: p == "skill.md"
                           or re.match(r"^skills/[^/]+/skill\.md$", p)
-                          or (re.match(r"^[^/]+/skill\.md$", p) and not skill_is_noise(p)))
-    # 本体目录（非点、非噪声）下的 SKILL.md，含更深层如中文路径"技能/<名>/SKILL.md"——极小仓库保底用
+                          or (re.match(r"^[^/]+/skill\.md$", p) and not skill_is_noise(p)
+                              and skill_side_share(p.split("/")[0]) >= 0.5))
+    # 本体目录（非点、非噪声）下的 SKILL.md，含更深层如中文路径"技能/<名>/SKILL.md"——极小仓库保底用；
+    # 同样的占比兜底也适用（1.1.11）
     skill_md_visible = count(lambda p: p == "skill.md"
-                             or (p.endswith("/skill.md") and not skill_is_noise(p)))
+                             or (p.endswith("/skill.md") and not skill_is_noise(p)
+                                 and skill_side_share(p.split("/")[0]) >= 0.5))
     manifests = [f for f in files if re.search(r"(^|/)(\.claude-plugin|\.cursor-plugin|\.copilot-plugin|\.codex-plugin)/", f.lower())
                  or re.search(r"(^|/)(plugin|marketplace)\.json$", f.lower())]
     cmd_md = count(lambda p: re.search(r"(^|/)commands/[^/]+\.md$", p) is not None)
@@ -193,7 +221,8 @@ def main():
         if n <= 5 and skill_md_visible:
             # 极小仓库且存在本体目录（非点、非噪声）的 SKILL.md——技能大概率是本体（如中文路径
             # 深层单技能），技能信号给保底分，避免被"文档占比"反超；
-            # .claude/ 点目录、docs/examples 噪声目录都不满足 skill_md_visible，不保底（1.1.8-1.1.10）
+            # .claude/ 点目录、docs/examples 噪声目录、本体侧占比不足 50% 的模板目录
+            # 都不满足 skill_md_visible，不保底（1.1.8-1.1.11）
             pts = max(pts, 4)
         add("agent-skill-plugin", pts, f"{skill_md} 个 SKILL.md")
     if manifests:

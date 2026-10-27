@@ -207,6 +207,35 @@ class ProbeTests(unittest.TestCase):
                                 "%s/ 的 SKILL.md 模板被当成技能包本体:\n%s" % (d, out[:500]))
                 self.assertNotIn("根/skills 布局", out)
 
+    def test_root_skill_dirs_union_share(self):
+        """根下 2/3/5/10/30 个技能目录（各带 references/、scripts/）判技能包（1.1.12 回归）。
+
+        1.1.11 的本体侧占比按单个首层目录算，N≥3 时每个技能目录都只占全仓库一小部分，
+        3/5/10 个技能目录的仓库被误判成内容合集；1.1.12 改按全部候选技能目录合计计算后
+        恢复。N=2 单目录占比恰好 50% 过线（锁 >= 边界语义，两版都过）；N=30 在 1.1.11
+        靠 SKILL.md 数量多的得分公式兜住（两版都过）。
+        """
+        for k in ("n2", "n3", "n5", "n10", "n30"):
+            with self.subTest(k=k):
+                _, out = run_probe("classify_repo", self.fx["root_skills_" + k])
+                self.assertTrue(re.search(r"主类型\*\*:\s*`agent-skill-plugin`", out),
+                                "根下 %s 个技能目录被分错类:\n%s" % (k[1:], out[:500]))
+                self.assertIn("根/skills 布局", out)
+
+    def test_skills_layout_strong_signal(self):
+        """根下 skills/<name>/SKILL.md 布局判技能强信号，文档占比高也不误判（1.1.9-1.1.12 行为锁）。"""
+        _, out = run_probe("classify_repo", self.fx["skills_layout"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`agent-skill-plugin`", out),
+                        "skills/ 布局未识别:\n%s" % out[:500])
+        self.assertIn("根/skills 布局", out)
+
+    def test_three_template_dirs_still_content(self):
+        """教程仓库带 3 个模板目录：合计占比仍不足 50%，不因合计口径误判技能包（1.1.12）。"""
+        _, out = run_probe("classify_repo", self.fx["tutorial_tpl_three"])
+        self.assertTrue(re.search(r"主类型\*\*:\s*`content-collection`", out),
+                        "3 个模板目录被当成技能包本体:\n%s" % out[:500])
+        self.assertNotIn("根/skills 布局", out)
+
 
 if __name__ == "__main__":
     unittest.main()

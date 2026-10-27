@@ -2,7 +2,7 @@
 """离线测试夹具生成器：一次性生成探针脚本的全部攻击/边界样本仓库。
 
 用法：python tools/make_fixtures.py <目标目录>
-生成 22 类样本（每类一个子目录），供 tests/test_probes.py 断言：
+生成 29 类样本（每类一个子目录），供 tests/test_probes.py 断言：
   1. symlink_attack      SKILL.md 软链到仓库外的秘密文件（Windows 无特权时自动跳过并留标记）
   2. malicious_gitconfig .git/config 带恶意 fsmonitor（若被执行会留下 PWNED 标记文件）
   3. chinese_paths       中文目录/文件名 + 1 条失效相对链接
@@ -20,6 +20,12 @@
  15-22. tutorial_tpl_<d> 教程仓库在黑名单外目录放 SKILL.md 模板（1.1.11 场景）：
        <d> ∈ template/templates/assets/spec/resources/reference/snippets/tutorial，
        30 页正文 + 1 个模板只占约 3%，"本体侧占比 ≥ 50%"兜底后仍判内容合集
+ 23. root_skills_n2/n3/n5/n10/n30
+                        根下 N 个技能目录，每个自带 references/、scripts/（1.1.12 场景）：
+                        占比按全部候选技能目录合计计算；N=2 单目录恰好 50%（边界锁），
+                        N=3/5/10 在 1.1.11 的单目录占比下误判内容合集，N=30 靠得分公式兜住
+ 24. skills_layout      根下 skills/<name>/SKILL.md 布局 + 大量文档：强信号不受占比兜底约束
+ 25. tutorial_tpl_three 教程仓库带 3 个模板目录：合计占比仍不足 50%，仍判内容合集
 """
 import os
 import subprocess
@@ -249,6 +255,51 @@ def build_all(out):
               skill("example", 'Template showing the SKILL.md format; triggers on "example".', "body\n"))
         write(os.path.join(tw, "README.md"), "# Rust tutorial book\nLessons for beginners.\n")
         commit(tw)
+
+    # 23. 根下 N 个技能目录（1.1.12 回归场景）：每个技能目录自带 references/、scripts/，
+    #     根下无卫星目录、无散文件。1.1.11 的"本体侧占比"按单个首层目录算，N≥3 时每个
+    #     技能目录都只占全仓库一小部分，技能强信号丢失（3/5/10 例误判内容合集）；
+    #     1.1.12 改按全部候选技能目录合计计算后恢复判技能包。
+    #     N=2 时单目录占比恰好 50% 过线（两版都过，锁 >= 边界语义）；
+    #     N=30 时 1.1.12 前靠 SKILL.md 数量多的得分公式兜住（两版都过）。
+    for k, names in (("n2", ("alpha", "beta")),
+                     ("n3", ("alpha", "beta", "gamma")),
+                     ("n5", ("alpha", "beta", "gamma", "delta", "epsilon")),
+                     ("n10", tuple("skill-%02d" % i for i in range(1, 11))),
+                     ("n30", tuple("skill-%02d" % i for i in range(1, 31)))):
+        rk = os.path.join(out, "root_skills_" + k)
+        made["root_skills_" + k] = rk
+        for name in names:
+            write(os.path.join(rk, name, "SKILL.md"),
+                  skill(name, "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
+            write(os.path.join(rk, name, "references", "r1.md"), "# 参考材料\n\n正文内容。\n")
+            write(os.path.join(rk, name, "scripts", "a.py"), "print('%s')\n" % name)
+        commit(rk)
+
+    # 24. skills/<name>/ 布局（行为锁）：根下 skills/ 里的 SKILL.md 是技能强信号，
+    #     不受"本体侧占比"兜底约束（1.1.11/1.1.12 均明确该布局不受影响），
+    #     即便文档占比 100% 也不误判内容合集
+    sl2 = os.path.join(out, "skills_layout")
+    made["skills_layout"] = sl2
+    write(os.path.join(sl2, "skills", "alpha", "SKILL.md"),
+          skill("alpha", "评估任意代码仓库的质量风险与学习价值并输出报告的测试技能夹具"))
+    write(os.path.join(sl2, "skills", "alpha", "guide.md"), "# alpha 指南\n\n正文内容。\n")
+    for i in range(1, 11):
+        write(os.path.join(sl2, "guide", "p%d.md" % i), "# Page %d\ntext\n" % i)
+    write(os.path.join(sl2, "README.md"), "# 技能合集\n\nskills/ 布局的技能仓库。\n")
+    commit(sl2)
+
+    # 25. 教程仓库带 3 个模板目录（1.1.12）：全部候选技能目录合计占比仍不足 50%，
+    #     不得因"合计"口径把多个模板目录抬成技能包，仍判内容合集
+    tt = os.path.join(out, "tutorial_tpl_three")
+    made["tutorial_tpl_three"] = tt
+    for i in range(1, 31):
+        write(os.path.join(tt, "guide", "p%d.md" % i), "# Page %d\ntext\n" % i)
+    for d in ("template", "assets", "spec"):
+        write(os.path.join(tt, d, "SKILL.md"),
+              skill("example", 'Template showing the SKILL.md format; triggers on "example".', "body\n"))
+    write(os.path.join(tt, "README.md"), "# Rust tutorial book\nLessons for beginners.\n")
+    commit(tt)
 
     return made
 
